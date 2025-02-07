@@ -2,7 +2,7 @@ import sys
 
 from .input_handler import handle_command_input
 from .models import VocabWord
-from .mw_api import display_mw_summary
+from .mw_api import print_mw_summary
 
 class Command:
     key = None
@@ -33,15 +33,6 @@ class RejectCommand(Command):
         self.state.reject_current_word()
         self.state.advance_to_next()
 
-class ShowDetailsCommand(Command):
-    key = 'd'
-    help_text = "show details"
-
-    def execute(self):
-        available_commands = [c for c in all_commands if c != ShowDetailsCommand]
-        display_mw_summary(self.vocab_word.word, self.vocab_word.mw_data)
-        handle_command_input(available_commands, self.vocab_word, self.storage, self.state)
-
 class UndoCommand(Command):
     key = 'u'
     help_text = "undo previous"
@@ -70,7 +61,6 @@ def format_help_text(commands):
 all_commands = [
     AcceptCommand,
     RejectCommand,
-    ShowDetailsCommand,
     UndoCommand,
     QuitCommand
 ] 

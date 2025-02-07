@@ -14,8 +14,8 @@ from .storage import VocabStorage
 
 def interactive_loop():
     """Main interactive loop for processing vocabulary words"""
-    state = State()
     storage = VocabStorage(VOCAB_DIR)
+    state = State(storage)
 
     print(f"Press '{QuitCommand.key}' at any time to quit.")
 
@@ -24,7 +24,7 @@ def interactive_loop():
             raw_word = state.current_word()
             word = canonicalize_word(raw_word)
             
-            if not word:
+            if not word or " " in word:
                 state.advance_to_next()
                 continue
 

@@ -7,7 +7,8 @@ from .spacy import canonicalize_word
 
 class State:
     """Manages the program's state and progress through the vocabulary list"""
-    def __init__(self):
+    def __init__(self, storage):
+        self.storage = storage
         self.index = 0
         self.processed_indices = []  # Stack of processed word indices
         self.rejected_words = []  # List of rejected words
@@ -37,18 +38,7 @@ class State:
                     file_contents = json.load(f)
                     self.index = file_contents.get("current_index", 0)
                     self.processed_indices = file_contents.get("processed_indices", [])
-                    
-                    # Handle old format with decisions dict
-                    decisions = file_contents.get("decisions", {})
-                    if decisions:
-                        # Convert old decisions format to rejected_words list
-                        self.rejected_words = [
-                            word for word, decision in decisions.items() 
-                            if decision == "n"
-                        ]
-                    else:
-                        # Use new format if available
-                        self.rejected_words = file_contents.get("rejected_words", [])
+                    self.rejected_words = file_contents.get("rejected_words", [])
             except (IOError, json.JSONDecodeError) as e:
                 print(f"Error loading state: {e}")
 
@@ -88,16 +78,22 @@ class State:
         self._save()
         return canonicalize_word(self.vocab_list[self.index])
 
+    def _should_process_word(self, word):
+        """Check if a word should be processed"""
+        canonical_word = canonicalize_word(word)
+        return (canonical_word and 
+                canonical_word not in self.rejected_words and 
+                not self.storage.exists(canonical_word))
+
     def advance_to_next(self):
         """
-        Advance to the next unskipped word and save the state.
-        Automatically skips previously rejected words.
+        Advance to the next processable word and save the state.
+        Automatically skips rejected words and words that already have folders.
         """
         self.index += 1
         while self.index < len(self.vocab_list):
             word = self.vocab_list[self.index]
-            canonical_word = canonicalize_word(word)
-            if canonical_word and canonical_word not in self.rejected_words:
+            if self._should_process_word(word):
                 break
             self.index += 1
         self._save()
@@ -121,5 +117,5 @@ class State:
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self):
         self._save() 

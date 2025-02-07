@@ -1,6 +1,8 @@
 import os
 import sys
 
+from .mw_api import print_mw_summary
+
 def get_key_press():
     """Get a single keypress from the user"""
     if os.name == "nt":
@@ -25,9 +27,9 @@ def handle_command_input(available_commands, vocab_word, storage, state):
     """
     Handle command input loop with specific available commands
     """
+    print_mw_summary(vocab_word.word, vocab_word.mw_data)
     print(f"\nDo you want to learn this word?")
     print(f"({format_help_text(available_commands)})")
-    print(vocab_word.word)
     
     while True:
         choice = get_key_press()

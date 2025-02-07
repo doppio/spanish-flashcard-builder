@@ -24,7 +24,6 @@ def is_valid_mw_data(mw_data):
 def get_mw_data(word):
     data = fetch_mw_data(word)
     if not is_valid_mw_data(data):
-        print(f"\nSkipping \"{word}\" because Merriam-Webster API returned suggestions instead of valid data.")
         return None
     return data
 
@@ -65,7 +64,7 @@ def download_audio(word, word_folder, audio_url):
     except requests.RequestException as e:
         print(f"Error downloading audio for {word}: {e}") 
         
-def display_mw_summary(word, mw_data):
+def print_mw_summary(word, mw_data):
     print("\n--- Merriam-Webster Data ---")
     if not mw_data:
         print("No data available.")

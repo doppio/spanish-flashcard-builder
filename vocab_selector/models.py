@@ -1,10 +1,10 @@
-class Word:
+class DictionaryTerm:
     """
     Represents a word with its dictionary entries.
     A single word can have multiple entries (e.g., different parts of speech).
     """
-    def __init__(self, search_word, entries):
-        self.search_word = search_word
+    def __init__(self, headword, entries):
+        self.headword = headword
         self.entries = entries 
 
 class DictionaryEntry:

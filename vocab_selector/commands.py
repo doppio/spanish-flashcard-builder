@@ -19,27 +19,22 @@ class AcceptCommand(Command):
 
     def execute(self):
         self.vocab_bank.save_entry(self.entry)
-        self.state.accept_entry(self.entry, self.word)
+        self.state.commit_entry()
 
 class RejectCommand(Command):
     key = 'n'
     help_text = "reject"
 
     def execute(self):
-        self.state.reject_entry(self.entry, self.word)
+        self.state.commit_entry()
 
 class UndoCommand(Command):
     key = 'u'
     help_text = "undo previous"
 
     def execute(self):
-        if not self.state.can_undo():
-            print("No previous entry to undo.")
-            return
-            
-        prev_entry = self.state.undo()
-        if prev_entry:
-            self.vocab_bank.remove(prev_entry.id)
+        self.state.undo()
+        self.vocab_bank.delete_entry(self.state.current_entry().id)
 
 class QuitCommand(Command):
     key = 'q'

@@ -26,13 +26,6 @@ def format_help_text(commands):
 def handle_command_input(entry, word, commands, vocab_bank, state):
     """
     Handle command input loop with specific available commands
-    
-    Args:
-        entry: The DictionaryEntry being processed
-        word: The Word object containing this entry
-        commands: List of available commands
-        vocab_bank: VocabBank object for persistence
-        state: Current application state
     """
 
     print_mw_summary(entry.headword, [entry.raw_data])

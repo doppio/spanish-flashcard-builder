@@ -7,16 +7,16 @@ from .commands import AcceptCommand, RejectCommand, UndoCommand, QuitCommand
 from .input_handler import handle_command_input
 from .state import State
 from .vocab_bank import VocabBank
-from config import CLEANED_SEARCH_WORD_FILE, VOCAB_BANK_DIR 
+from config import CLEANED_SEARCH_WORD_FILE, VOCAB_BANK_DIR
 
-def main():
+def main() -> None:
     word_list_path = Path(CLEANED_SEARCH_WORD_FILE)
     if not word_list_path.exists():
         print(f"File not found: {word_list_path}")
         sys.exit(1)
 
     vocab_bank = VocabBank(VOCAB_BANK_DIR)
-    state = State(vocab_bank)
+    state = State()
 
     all_commands = [
         AcceptCommand,

@@ -1,10 +1,14 @@
 import os
 import sys
+from typing import List
 
 from .mw_api import print_mw_summary
+from .models import DictionaryEntry, DictionaryTerm
+from .commands import Command
 
-def get_key_press():
-    """Get a single keypress from the user"""
+def get_key_press() -> str:
+    """Gets single keypress from the user."""
+    
     if os.name == "nt":
         import msvcrt
         return msvcrt.getch().decode().lower()
@@ -19,14 +23,13 @@ def get_key_press():
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
         return ch.lower()
 
-def format_help_text(commands):
-    """Format help text for a list of commands"""
+def format_help_text(commands: List[Command]) -> str:
+    """Formats help text for a list of commands."""
+    
     return ", ".join(f"{cmd.key}={cmd.help_text}" for cmd in commands)
 
-def handle_command_input(entry, word, commands, vocab_bank, state):
-    """
-    Handle command input loop with specific available commands
-    """
+def handle_command_input(entry: DictionaryEntry, word: DictionaryTerm, commands: List[Command], vocab_bank, state) -> None:
+    """Handles command input loop with specific available commands."""
 
     print_mw_summary(entry.headword, [entry.raw_data])
     

@@ -1,121 +1,185 @@
+from dataclasses import dataclass
+from typing import List, Set, Optional
 import json
 import os
 import sys
 
-from config import VOCAB_FILE, STATE_FILE
-from .spacy import canonicalize_word
+from config import CLEANED_SEARCH_WORD_FILE, SELECTOR_HISTORY_FILE
+from vocab_selector.models import DictionaryEntry, Word
+from vocab_selector.vocab_bank import VocabBank
+from vocab_selector.mw_api import look_up
+
+@dataclass
+class _StateData:
+    """Data structure for serializable state that stores progress through vocabulary selection"""
+    processed_search_words: List[str]  # Fully processed search words (all entries handled)
+    processed_entry_ids: List[str]  # Individual dictionary entry IDs that were processed
+    
+    @classmethod
+    def from_json(cls, json_data: dict) -> '_StateData':
+        return cls(**json_data)
+    
+    def to_json(self) -> dict:
+        return self.__dict__
 
 class State:
-    """Manages the program's state and progress through the vocabulary list"""
-    def __init__(self, storage):
-        self.storage = storage
-        self.index = 0
-        self.processed_indices = []  # Stack of processed word indices
-        self.rejected_words = []  # List of rejected words
-        self._load()
+    """Manages the program's history and progress through the vocabulary list.
+    
+    Handles loading/saving history, tracking processed words, and navigating through
+    the vocabulary list while maintaining the processing history.
+    """
+    def __init__(self, vocab_bank: 'VocabBank') -> None:
+        self._vocab_bank = vocab_bank
+        self._index: int = 0
+        # Track fully processed search words
+        self._processed_searchwords_list: List[str] = []
+        self._processed_searchwords_set: Set[str] = set()
+        # Track individual processed entries
+        self._processed_entries_list: List[str] = []
+        self._processed_entries_set: Set[str] = set()
+        self._searchwords_dataset: List[str] = self._load_search_words()
+        self._load_from_file()
 
-    def _load_vocab_list(self):
-        """Load vocabulary list from file"""
-        vocab = []
-        try:
-            with open(VOCAB_FILE, encoding='utf-8') as f:
-                for line in f:
-                    parts = line.strip().split()
-                    if parts:
-                        vocab.append(parts[0])
-        except IOError as e:
-            print(f"Error loading vocabulary file: {e}")
-            sys.exit(1)
-        return vocab
+    def current_word(self) -> Optional[str]:
+        """Get the current word or None if complete"""
+        return self._searchwords_dataset[self._index] if self._index < len(self._searchwords_dataset) else None
 
-    def _load(self):
-        """Load state from file if available"""
-        self.vocab_list = self._load_vocab_list()
+    def _advance_to_next_word(self):
+        self._index += 1
+
+    def skip_word(self, word: str) -> None:
+        """Mark a word as processed and skip it"""
+        self._mark_word_processed(word)
+        self._advance_to_next_word()
+
+    def accept_entry(self, entry: DictionaryEntry, word: Word) -> None:
+        """Mark an entry as processed and accepted"""
+        self._mark_entry_processed(entry.id)
+        if self._all_entries_processed(word):
+            self._mark_word_processed(entry.headword)
+            self._advance_to_next_word()
+        self._save_to_file()
+
+    def reject_entry(self, entry: DictionaryEntry, word: Word) -> None:
+        """Mark an entry as processed and rejected"""
+        self._mark_entry_processed(entry.id)
+        if self._all_entries_processed(word):
+            self._mark_word_processed(entry.headword)
+            self._advance_to_next_word()
+        self._save_to_file()
+
+    def undo(self) -> Optional[DictionaryEntry]:
+        """Undo the last processed entry and update word status"""
+        if not self._processed_entries_list:
+            return None
         
-        if os.path.exists(STATE_FILE):
-            try:
-                with open(STATE_FILE, 'r', encoding='utf-8') as f:
-                    file_contents = json.load(f)
-                    self.index = file_contents.get("current_index", 0)
-                    self.processed_indices = file_contents.get("processed_indices", [])
-                    self.rejected_words = file_contents.get("rejected_words", [])
-            except (IOError, json.JSONDecodeError) as e:
-                print(f"Error loading state: {e}")
+        last_entry_id = self._processed_entries_list.pop()
+        self._processed_entries_set.discard(last_entry_id)
+        
+        searchword = last_entry_id.split(':')[0]
+        print(f"Should undo word {searchword}?")
+        if self._processed_searchwords_list[-1] == searchword:
+            print(f"Undoing: {searchword}")
+            self._processed_searchwords_set.discard(searchword)
+            self._processed_searchwords_list.pop()
+            self._index -= 1
+            
+        # Delete the entry ID from the vocab bank, if it exists
+        self._vocab_bank.delete_entry(last_entry_id)
 
-    def _save(self):
-        """Save current state to file using new format"""
-        file_contents = {
-            'current_index': self.index,
-            'processed_indices': self.processed_indices,
-            'rejected_words': self.rejected_words
-        }
-        try:
-            with open(STATE_FILE, 'w', encoding='utf-8') as f:
-                json.dump(file_contents, f, indent=2)
-        except IOError as e:
-            print(f"Error saving state: {e}")
-
-    def current_word(self):
-        """Get the current word"""
-        if self.index < len(self.vocab_list):
-            return self.vocab_list[self.index]
-        return None
+        self._save_to_file()
+                
 
     def can_undo(self):
         """Check if undo is possible"""
-        return bool(self.processed_indices)
+        return bool(self._processed_entries_list)
 
-    def undo(self):
-        """
-        Undo the last action by moving back to the last processed word
-        Returns the previous word
-        """
-        if not self.can_undo():
-            return None
-            
-        last_index = self.processed_indices.pop()
-        self.index = last_index
-        self._save()
-        return canonicalize_word(self.vocab_list[self.index])
+    def has_processed_entry(self, entry_id: str) -> bool:
+        """Check if a specific entry has been processed"""
+        return entry_id in self._processed_entries_set
 
-    def _should_process_word(self, word):
-        """Check if a word should be processed"""
-        canonical_word = canonicalize_word(word)
-        return (canonical_word and 
-                canonical_word not in self.rejected_words and 
-                not self.storage.exists(canonical_word))
+    def has_processed_word(self, word: str) -> bool:
+        """Check if all entries for a word have been processed"""
+        return word in self._processed_searchwords_set
 
-    def advance_to_next(self):
-        """
-        Advance to the next processable word and save the state.
-        Automatically skips rejected words and words that already have folders.
-        """
-        self.index += 1
-        while self.index < len(self.vocab_list):
-            word = self.vocab_list[self.index]
-            if self._should_process_word(word):
-                break
-            self.index += 1
-        self._save()
-
-    def accept_current_word(self):
-        """Mark the current word as processed and accepted"""
-        self.processed_indices.append(self.index)
-        self._save()
-
-    def reject_current_word(self):
-        """Mark the current word as processed and rejected"""
-        self.processed_indices.append(self.index)
-        current_word = canonicalize_word(self.vocab_list[self.index])
-        if current_word:
-            self.rejected_words.append(current_word)
-        self._save()
-
-    def is_complete(self):
-        return self.index >= len(self.vocab_list)
+    def _all_entries_processed(self, word: Word) -> bool:
+        """Check if all entries for a word have been processed"""
+        return all(self.has_processed_entry(entry.id) for entry in word.entries)
 
     def __enter__(self):
         return self
 
-    def __exit__(self):
-        self._save() 
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._save_to_file()
+
+    def _should_process_searchword(self, search_word: str) -> bool:
+        """Check if a word should be processed"""
+        if search_word in self._processed_searchwords_set:
+            return False
+        
+        # Look up the entry to get its ID for storage check
+        word = look_up(search_word)
+        if not word or not word.entries:
+            return False
+        
+        # If the word has at least one unprocessed entry, we should process it
+        return not all(self.has_processed_entry(e.id) for e in word.entries)
+
+    def _mark_word_processed(self, word: str) -> None:
+        """Helper method to mark a word as processed"""
+        if word not in self._processed_searchwords_set:
+            self._processed_searchwords_list.append(word)
+            self._processed_searchwords_set.add(word)  # Update set along with list
+
+    def _mark_entry_processed(self, entry_id: str) -> None:
+        """Helper method to mark an entry as processed"""
+        if entry_id not in self._processed_entries_set:
+            self._processed_entries_list.append(entry_id)
+            self._processed_entries_set.add(entry_id)
+
+    def _load_search_words(self) -> List[str]:
+        """Load and return search words from vocabulary file.
+        
+        Returns the first word from each non-empty line in the file.
+        """
+        try:
+            with open(CLEANED_SEARCH_WORD_FILE, encoding='utf-8') as f:
+                return [line.strip().split()[0] for line in f if line.strip()]
+        except IOError as e:
+            print(f"Error loading vocabulary file '{CLEANED_SEARCH_WORD_FILE}': {e}")
+            sys.exit(1)
+
+    def _load_from_file(self) -> None:
+        """Load previous processing history from file if available"""
+        if not os.path.exists(SELECTOR_HISTORY_FILE):
+            return
+
+        try:
+            with open(SELECTOR_HISTORY_FILE, 'r', encoding='utf-8') as f:
+                data = _StateData.from_json(json.load(f))
+                self._processed_searchwords_list = data.processed_search_words
+                self._processed_searchwords_set = set(data.processed_search_words)
+                self._processed_entries_list = data.processed_entry_ids
+                self._processed_entries_set = set(data.processed_entry_ids)
+                
+                # Find the first unprocessed word that should be processed
+                self._index = 0
+                while self._index < len(self._searchwords_dataset):
+                    if self._should_process_searchword(self._searchwords_dataset[self._index]):
+                        break
+                    self._index += 1
+
+        except (IOError, json.JSONDecodeError) as e:
+            print(f"Error loading history from '{SELECTOR_HISTORY_FILE}': {e}")
+
+    def _save_to_file(self) -> None:
+        """Save current history to file"""
+        try:
+            history = _StateData(
+                processed_search_words=self._processed_searchwords_list,
+                processed_entry_ids=self._processed_entries_list
+            )
+            with open(SELECTOR_HISTORY_FILE, 'w', encoding='utf-8') as f:
+                json.dump(history.to_json(), f, indent=2)
+        except IOError as e:
+            print(f"Error saving history: {e}") 

@@ -4,8 +4,9 @@ import json
 import os
 
 from config import MERRIAM_WEBSTER_API_KEY
+from .models import Word, DictionaryEntry
 
-def fetch_mw_data(word):
+def _fetch_mw_data(word):
     api_url = f"https://www.dictionaryapi.com/api/v3/references/spanish/json/{word}?key={MERRIAM_WEBSTER_API_KEY}"
     try:
         response = requests.get(api_url)
@@ -14,18 +15,37 @@ def fetch_mw_data(word):
     except (requests.RequestException, json.JSONDecodeError):
         return None
 
-def is_valid_mw_data(mw_data):
+def _is_valid_mw_data(mw_data):
     if not mw_data:
         return False
     if isinstance(mw_data, list) and len(mw_data) > 0:
         return isinstance(mw_data[0], dict)
     return False
 
-def get_mw_data(word):
-    data = fetch_mw_data(word)
-    if not is_valid_mw_data(data):
+def look_up(search_word):
+    data = _fetch_mw_data(search_word)
+    if not _is_valid_mw_data(data):
         return None
-    return data
+        
+    # Filter entries to only include those matching our search word exactly
+    matching_entries = []
+    for entry in data:
+        if isinstance(entry, dict):
+            # Get the headword from hwi
+            hwi = entry.get("hwi", {})
+            headword = hwi.get("hw", "").replace("*", "")  # MW uses * for syllable breaks
+            
+            # Only include entries where the headword matches exactly
+            if search_word == headword:
+                if entry.get("fl") and entry.get("shortdef"):
+                    matching_entries.append(entry)
+    
+    if not matching_entries:
+        return None
+        
+    # Convert raw entries to DictionaryEntry objects
+    dictionary_entries = [DictionaryEntry(entry) for entry in matching_entries]
+    return Word(search_word, dictionary_entries)
 
 def extract_audio_url(mw_data):
     if not mw_data:
@@ -60,9 +80,9 @@ def download_audio(word, word_folder, audio_url):
         audio_path = os.path.join(word_folder, "pronunciation.mp3")
         with open(audio_path, "wb") as f:
             f.write(response.content)
-        print(f"Downloaded audio for {word}.")
+        print(f"Downloaded audio for '{word}'")
     except requests.RequestException as e:
-        print(f"Error downloading audio for {word}: {e}") 
+        print(f"Error downloading audio for '{word}': {e}") 
         
 def print_mw_summary(word, mw_data):
     print("\n--- Merriam-Webster Data ---")
@@ -73,8 +93,7 @@ def print_mw_summary(word, mw_data):
     if entry and isinstance(entry, dict):
         pos = entry.get("fl", "Unknown")
         shortdef = entry.get("shortdef", [])
-        print(f"Word: {word}")
-        print(f"Part of Speech: {pos}")
+        print(f"Word: \033[1m{word}\033[0m ({pos})")  # Bold using ANSI escape codes
         if shortdef:
             print("Definitions:")
             for d in shortdef:

@@ -1,37 +1,32 @@
 import sys
 
-from .input_handler import handle_command_input
-from .models import VocabWord
-from .mw_api import print_mw_summary
-
 class Command:
     key = None
     help_text = None
     
-    def __init__(self, vocab_word=None, storage=None, state=None):
-        self.vocab_word = vocab_word
-        self.storage = storage
+    def __init__(self, entry=None, vocab_bank=None, state=None, word=None):
+        self.entry = entry
+        self.vocab_bank = vocab_bank
         self.state = state
+        self.word = word
     
     def execute(self):
         raise NotImplementedError("Subclasses must implement the execute method.")
 
 class AcceptCommand(Command):
     key = 'y'
-    help_text = "accept word"
+    help_text = "accept"
 
     def execute(self):
-        self.storage.save(self.vocab_word)
-        self.state.accept_current_word()
-        self.state.advance_to_next()
+        self.vocab_bank.save_entry(self.entry)
+        self.state.accept_entry(self.entry, self.word)
 
 class RejectCommand(Command):
     key = 'n'
-    help_text = "reject word"
+    help_text = "reject"
 
     def execute(self):
-        self.state.reject_current_word()
-        self.state.advance_to_next()
+        self.state.reject_entry(self.entry, self.word)
 
 class UndoCommand(Command):
     key = 'u'
@@ -42,9 +37,9 @@ class UndoCommand(Command):
             print("No previous entry to undo.")
             return
             
-        prev_word = self.state.undo()
-        if prev_word:
-            self.storage.remove(prev_word)
+        prev_entry = self.state.undo()
+        if prev_entry:
+            self.vocab_bank.remove(prev_entry.id)
 
 class QuitCommand(Command):
     key = 'q'

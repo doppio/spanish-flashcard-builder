@@ -11,7 +11,7 @@ MERRIAM_WEBSTER_API_KEY = os.getenv("MERRIAM_WEBSTER_API_KEY")
 BING_API_KEY = os.getenv("BING_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-DATA_DIR = os.path.join('data')
+DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
 
 RAW_SEARCH_WORD_FILE = os.path.join(DATA_DIR, 'raw_vocab.txt')
 CLEANED_SEARCH_WORD_FILE = os.path.join(DATA_DIR, 'cleaned_vocab.txt')
@@ -20,6 +20,8 @@ VOCAB_BANK_DIR = os.path.join(DATA_DIR, 'vocab_entries')
 
 DECK_NAME = "Spanish Vocabulary"
 DECK_ID = 7262245122  # Unique integer for the deck
+
+SPACY_MODEL_NAME = "es_core_news_md"
 
 def validate_config():
     required_vars = {

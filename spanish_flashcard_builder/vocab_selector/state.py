@@ -5,9 +5,9 @@ import os
 import sys
 import logging
 
-from config import CLEANED_SEARCH_WORD_FILE, SELECTOR_HISTORY_FILE
-from vocab_selector.models import DictionaryEntry, DictionaryTerm
-from vocab_selector.mw_api import look_up
+from spanish_flashcard_builder.config import CLEANED_SEARCH_WORD_FILE, SELECTOR_HISTORY_FILE
+from .models import DictionaryEntry, DictionaryTerm
+from .mw_api import look_up
 
 @dataclass
 class _StateData:

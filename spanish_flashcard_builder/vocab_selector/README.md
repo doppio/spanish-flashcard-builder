@@ -26,10 +26,10 @@ Selected vocabulary words are saved in a structured format:
 ```
 vocab_bank/
 ├── {entry_id_1}/
-│ ├── entry.json
+│ ├── mw_entry.json
 │ └── pronunciation.mp3
 └── {entry_id_2}/
-  ├── entry.json
+  ├── mw_entry.json
   └── pronunciation.mp3
 ```
 

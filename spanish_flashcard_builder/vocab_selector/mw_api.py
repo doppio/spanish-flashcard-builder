@@ -4,7 +4,7 @@ import requests
 import json
 import os
 
-from config import MERRIAM_WEBSTER_API_KEY
+from spanish_flashcard_builder.config import MERRIAM_WEBSTER_API_KEY
 from .models import DictionaryTerm, DictionaryEntry
 
 def _fetch_mw_data(word):

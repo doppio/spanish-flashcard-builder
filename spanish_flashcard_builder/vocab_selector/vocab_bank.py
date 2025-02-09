@@ -2,7 +2,6 @@ import os
 import json
 import shutil
 import logging
-from typing import Optional
 
 from .mw_api import download_audio, extract_audio_url
 from .models import DictionaryEntry
@@ -37,7 +36,7 @@ class VocabBank:
         os.makedirs(entry_dir, exist_ok=True)
         
         print(f"Saving entry '{entry.id}'")
-        with open(os.path.join(entry_dir, 'entry.json'), 'w') as f:
+        with open(os.path.join(entry_dir, 'mw_entry.json'), 'w') as f:
             json.dump(entry.raw_data, f, indent=2)
             
         audio_url = extract_audio_url([entry.raw_data])

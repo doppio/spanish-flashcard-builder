@@ -1,0 +1,25 @@
+Spanish word "{word}" ({part_of_speech}):
+{definitions_text}
+
+Return JSON with:
+- display_form: Full form with articles/gender ("el hombre", "la casa", "el doctor / la doctora", "el/la estudiante", "grande", "pequeño / pequeña")
+- definition: Brief single definition using most common meaning from above
+- frequency_rating: 1-10
+- example_sentences: 1-3 {{es, en}} pairs, ensuring each demonstrates unique usage. Err on the side of fewer if usages are similar.
+- image_search_query: Specific English description for a memorable image
+- part_of_speech: noun/verb/adjective/etc.
+- gender: "masculine" | "feminine" | "masculine/feminine" | "common" - omit if N/A
+
+Example:
+{{
+    "display_form": "la casa",
+    "definition": "house, home",
+    "frequency_rating": 10,
+    "example_sentences": [
+        {{"es": "Mi casa es azul.", "en": "My house is blue."}},
+        {{"es": "Voy a casa después del trabajo.", "en": "I go home after work."}},
+    ],
+    "image_search_query": "colorful house",
+    "part_of_speech": "noun",
+    "gender": "feminine"
+}}

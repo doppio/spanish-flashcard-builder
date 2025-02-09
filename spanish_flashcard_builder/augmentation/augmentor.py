@@ -20,7 +20,7 @@ class VocabAugmentor:
         for folder_name in sorted(os.listdir(self.vocab_dir)):
             folder_path = os.path.join(self.vocab_dir, folder_name)
             if self._needs_augmentation(folder_path):
-                print(f"\Augmenting word in: {folder_path}")
+                print(f"Augmenting word in: {folder_path}")
                 words_processed |= self.augment_word(folder_path)
                 
         return words_processed

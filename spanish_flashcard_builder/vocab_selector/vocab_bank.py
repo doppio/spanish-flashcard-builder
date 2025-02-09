@@ -5,6 +5,7 @@ import logging
 
 from .mw_api import download_audio, extract_audio_url
 from .models import DictionaryEntry
+from spanish_flashcard_builder.config import paths
 
 class VocabBank:
     """Handles saving dictionary entries and their audio files to disk."""
@@ -36,13 +37,13 @@ class VocabBank:
         os.makedirs(entry_dir, exist_ok=True)
         
         print(f"Saving entry '{entry.id}'")
-        with open(os.path.join(entry_dir, 'mw_entry.json'), 'w') as f:
+        with open(os.path.join(entry_dir, 'merriam_webster_entry.json'), 'w') as f:
             json.dump(entry.raw_data, f, indent=2)
             
         audio_url = extract_audio_url([entry.raw_data])
         if audio_url:
             download_audio(entry.headword, entry_dir, audio_url)
-        
+
     def has_entry(self, entry_id: str) -> bool:
         """Checks if an entry ID has already been saved"""
         return os.path.exists(self._get_entry_path(entry_id))
@@ -50,3 +51,13 @@ class VocabBank:
     def _get_entry_path(self, entry_id: str) -> str:
         """Get directory path for a dictionary entry."""
         return os.path.join(self.base_dir, str(entry_id))
+
+def save_word_data(word_folder, mw_data):
+    # Save dictionary entry
+    with open(os.path.join(word_folder, 'merriam_webster_entry.json'), 'w') as f:
+        json.dump(mw_data, f)
+    
+    # Save audio
+    audio_url = extract_audio_url(mw_data)
+    if audio_url:
+        download_audio(word, word_folder, audio_url)

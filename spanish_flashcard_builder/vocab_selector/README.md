@@ -20,19 +20,6 @@ The vocabulary selector takes a list of Spanish words and allows users to intera
 - Text file containing Spanish words (one per line)
 - Configuration settings in `config.py`
 
-## Component Output
-
-Selected vocabulary words are saved in a structured format:
-```
-vocab_bank/
-├── {entry_id_1}/
-│ ├── mw_entry.json
-│ └── pronunciation.mp3
-└── {entry_id_2}/
-  ├── mw_entry.json
-  └── pronunciation.mp3
-```
-
 ## Usage
 
 During the review process, for each word you can:

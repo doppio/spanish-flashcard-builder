@@ -1,7 +1,7 @@
 # Initialize spaCy
 import sys
 import spacy
-from spanish_flashcard_builder.config import SPACY_MODEL_NAME
+from spanish_flashcard_builder.config import spacy_config
 
 nlp = None
 
@@ -17,9 +17,9 @@ def load_spacy_model():
     """
     global nlp
     try:
-        nlp = spacy.load(SPACY_MODEL_NAME)
+        nlp = spacy.load(spacy_config.model_name)
     except OSError:
-        print(f"Error: Spanish language model '{SPACY_MODEL_NAME}' not found.")
+        print(f"Error: Spanish language model '{spacy_config.model_name}' not found.")
         response = input("Would you like to download it now? [Y/n] ").strip().lower()
         if response in ('', 'y', 'yes'):
             from spanish_flashcard_builder.scripts.download_spacy_model import download_spacy_model

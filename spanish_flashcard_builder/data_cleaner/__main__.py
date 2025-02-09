@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from collections import defaultdict
-from spanish_flashcard_builder.config import RAW_SEARCH_WORD_FILE, CLEANED_SEARCH_WORD_FILE
+from spanish_flashcard_builder.config import paths
 from .spacy import load_spacy_model, canonicalize_word
 
 def process_vocab_file():
@@ -16,10 +16,10 @@ def process_vocab_file():
     print("Processing vocabulary file...")
     
     # First count total lines for progress calculation
-    total_lines = sum(1 for _ in open(RAW_SEARCH_WORD_FILE, 'r', encoding='utf-8'))
+    total_lines = sum(1 for _ in open(paths.raw_vocab, 'r', encoding='utf-8'))
     
     # Read and process the raw vocabulary file
-    with open(RAW_SEARCH_WORD_FILE, 'r', encoding='utf-8') as f:
+    with open(paths.raw_vocab, 'r', encoding='utf-8') as f:
         for i, line in enumerate(f, 1):
             # Show progress every 100 lines
             if i % 100 == 0:
@@ -46,7 +46,7 @@ def process_vocab_file():
     # Write the cleaned vocabulary file
     total_lemmas = len(lemma_order)
     
-    with open(CLEANED_SEARCH_WORD_FILE, 'w', encoding='utf-8') as f:
+    with open(paths.cleaned_vocab, 'w', encoding='utf-8') as f:
         for i, lemma in enumerate(lemma_order, 1):
             if i % 100 == 0:
                 progress = (i / total_lemmas) * 100
@@ -59,7 +59,7 @@ def process_vocab_file():
     # Clear the writing progress message
     print("\r" + " " * 50 + "\r", end='', flush=True)
     print(f"Processed {len(lemma_dict)} unique lemmas")
-    print(f"Output written to {CLEANED_SEARCH_WORD_FILE}")
+    print(f"Output written to {paths.cleaned_vocab}")
 
 def main():
     """Main entry point for data cleaning functionality"""

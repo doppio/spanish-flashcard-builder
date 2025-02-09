@@ -4,13 +4,13 @@ import requests
 import json
 import os
 
-from spanish_flashcard_builder.config import MERRIAM_WEBSTER_API_KEY
+from spanish_flashcard_builder.config import api_keys, paths
 from .models import DictionaryTerm, DictionaryEntry
 
 def _fetch_mw_data(word):
     """Fetches data from the Merriam-Webster API for a given word."""
 
-    api_url = f"https://www.dictionaryapi.com/api/v3/references/spanish/json/{word}?key={MERRIAM_WEBSTER_API_KEY}"
+    api_url = f"https://www.dictionaryapi.com/api/v3/references/spanish/json/{word}?key={api_keys.merriam_webster}"
     try:
         response = requests.get(api_url)
         response.raise_for_status()
@@ -76,13 +76,13 @@ def download_audio(word: str, word_folder: str, audio_url: str) -> None:
     try:
         response = requests.get(audio_url)
         response.raise_for_status()
-        audio_path = os.path.join(word_folder, "pronunciation.mp3")
+        audio_path = os.path.join(word_folder, paths.pronunciation_filename)
         with open(audio_path, "wb") as f:
             f.write(response.content)
         print(f"Downloaded audio for '{word}'")
     except requests.RequestException as e:
-        print(f"Error downloading audio for '{word}': {e}") 
-        
+        print(f"Error downloading audio for '{word}': {e}")
+
 def print_mw_summary(word: str, mw_data: List[Dict]) -> None:
     """Prints a summary of the Merriam-Webster data for a word."""
     

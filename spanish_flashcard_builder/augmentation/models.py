@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 @dataclass
-class EnrichmentData:
+class AugmentedTerm:
     display_form: str  # e.g., "la silla", "el/la estudiante"
     definitions: list 
     frequency_rating: int

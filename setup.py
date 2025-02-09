@@ -17,6 +17,7 @@ setup(
         "tqdm>=4.62.0",
         "spacy>=3.0.0",
         "click>=8.0.0",
+        "pyyaml>=5.1",
     ],
     entry_points={
         'console_scripts': [

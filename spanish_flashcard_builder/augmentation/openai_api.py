@@ -1,25 +1,25 @@
 import json
 import openai
 from typing import List
-from .models import EnrichmentData
+from .models import AugmentedTerm
+from spanish_flashcard_builder.config import openai_config
 
 class OpenAIClient:
     def __init__(self, api_key: str):
         openai.api_key = api_key
 
-    def get_enrichment_data(self, word: str, part_of_speech: str, definitions: List[str]) -> EnrichmentData:
+    def augment_term(self, word: str, part_of_speech: str, definitions: List[str]) -> AugmentedTerm:
         prompt = self._build_prompt(word, part_of_speech, definitions)
         
         response = openai.ChatCompletion.create(
-            model="gpt-4o-mini",
+            model=openai_config.model,
+            temperature=openai_config.temperature,
+            response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": "You are a Spanish language expert helping to create enriched flashcard content."},
+                {"role": "system", "content": "You are a language expert helping to create enriched flashcard content for Latin American Spanish."},
                 {"role": "user", "content": prompt}
-            ],
-            temperature=0.7,
-            response_format={"type": "json_object"}
+            ]
         )
-
 
         print(response.choices[0].message.content)
         return self._parse_response(response.choices[0].message.content)
@@ -30,13 +30,13 @@ class OpenAIClient:
 {definitions_text}
 
 Return JSON with:
-- display_form: Full form with articles/gender ("el/la estudiante", "el doctor / la doctora", "grande", "pequeño / pequeña")
-- definitions: Brief list only using similar meanings as above, in order of frequency of use.
+- display_form: Full form with articles/gender ("el hombre", "la casa", "el doctor / la doctora", "el/la estudiante", "grande", "pequeño / pequeña")
+- definitions: Brief list only using same meanings as above, in order of frequency of use.
 - frequency_rating: 1-10
 - example_sentences: 1-3 {{es, en}} pairs, ensuring each demonstrates unique usage. Err on the side of fewer if usages are similar.
 - image_search_query: Specific English description for a memorable image
 - part_of_speech: noun/verb/adjective/etc.
-- gender?: masculine/feminine, or omitted
+- gender: "masculine" | "feminine" | "masculine/feminine" | "common" - null if N/A
 
 Example:
 {{
@@ -51,11 +51,9 @@ Example:
     "part_of_speech": "noun",
     "gender": "feminine"
 }}
-
-Only consider common Latin American Spanish usages.
 """
 
-    def _parse_response(self, response_text: str) -> EnrichmentData:
+    def _parse_response(self, response_text: str) -> AugmentedTerm:
         try:
             data = json.loads(response_text)
 
@@ -63,7 +61,7 @@ Only consider common Latin American Spanish usages.
                 (sent["es"], sent["en"]) 
                 for sent in data["example_sentences"]
             ]
-            return EnrichmentData(
+            return AugmentedTerm(
                 display_form=data["display_form"],
                 definitions=data["definitions"],
                 frequency_rating=data["frequency_rating"],

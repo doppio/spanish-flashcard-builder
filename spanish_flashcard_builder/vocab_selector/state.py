@@ -5,7 +5,7 @@ import os
 import sys
 import logging
 
-from spanish_flashcard_builder.config import CLEANED_SEARCH_WORD_FILE, SELECTOR_HISTORY_FILE
+from spanish_flashcard_builder.config import paths
 from .models import DictionaryEntry, DictionaryTerm
 from .mw_api import look_up
 
@@ -158,27 +158,27 @@ class State:
     def _load_headword_list(self) -> List[str]:
         """Loads the list of headwords from a file."""
         try:
-            with open(CLEANED_SEARCH_WORD_FILE, encoding='utf-8') as f:
+            with open(paths.cleaned_vocab, encoding='utf-8') as f:
                 return [line.strip().split()[0] for line in f if line.strip()]
         except IOError as e:
-            logging.error(f"Error loading word list from '{CLEANED_SEARCH_WORD_FILE}': {e}")
+            logging.error(f"Error loading word list from '{paths.cleaned_vocab}': {e}")
             sys.exit(1)
     
     def _load_history(self) -> None:
         """Loads the state history from a file."""
-        if not os.path.exists(SELECTOR_HISTORY_FILE):
+        if not os.path.exists(paths.selector_history):
             return
         try:
-            with open(SELECTOR_HISTORY_FILE, 'r', encoding='utf-8') as f:
+            with open(paths.selector_history, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 self._data = _StateData.from_json(data)
         except (IOError, json.JSONDecodeError) as e:
-            logging.error(f"Error loading history from '{SELECTOR_HISTORY_FILE}': {e}")
+            logging.error(f"Error loading history from '{paths.selector_history}': {e}")
     
     def _save_history(self) -> None:
         """Saves the current state history to a file."""
         try:
-            with open(SELECTOR_HISTORY_FILE, 'w', encoding='utf-8') as f:
+            with open(paths.selector_history, 'w', encoding='utf-8') as f:
                 json.dump(self._data.to_json(), f, indent=2)
         except IOError as e:
-            logging.error(f"Error saving history to '{SELECTOR_HISTORY_FILE}': {e}") 
+            logging.error(f"Error saving history to '{paths.selector_history}': {e}") 

@@ -1,7 +1,7 @@
 import os
 import json
 from typing import Dict, List
-from spanish_flashcard_builder.config import VOCAB_BANK_DIR
+from spanish_flashcard_builder.config import paths
 
 # ANSI escape codes
 BOLD_START = '\033[1m'
@@ -14,11 +14,11 @@ COMPONENT_MISSING_SYMBOL = "❌"
 HEADER_FORMAT = "{:<20} "
 COMPONENT_FORMAT = "{:<12}"
 
-# Define components to check - moved to module level since it's constant
+# Define components to check using config values
 COMPONENTS = {
-    'Dictionary': 'mw_entry.json',
+    'Dictionary': 'merriam_webster_entry.json',
     'Audio': 'pronunciation.mp3',
-    'Flashcard': 'flashcard_data.json',
+    'Flashcard': 'augmented_term.json',
     'Image': 'image.png'
 }
 
@@ -27,25 +27,13 @@ def bold(text: str) -> str:
     return f"{BOLD_START}{text}{BOLD_END}"
 
 def check_component(vocab_path: str, filename: str) -> bool:
-    """Check if a component exists for a vocabulary item.
-    
-    Args:
-        vocab_path: Path to vocabulary item directory
-        filename: Name of component file to check
-        
-    Returns:
-        bool: True if component exists, False otherwise
-    """
+    """Check if a component exists for a vocabulary item."""
     return os.path.exists(os.path.join(vocab_path, filename))
 
 def get_vocab_dirs() -> List[str]:
-    """Get sorted list of vocabulary directories.
-    
-    Returns:
-        List of directory names for vocabulary items
-    """
-    return sorted([d for d in os.listdir(VOCAB_BANK_DIR) 
-                  if os.path.isdir(os.path.join(VOCAB_BANK_DIR, d))])
+    """Get sorted list of vocabulary directories."""
+    return sorted([d for d in os.listdir(paths.terms_dir) 
+                  if os.path.isdir(os.path.join(paths.terms_dir, d))])
 
 def main() -> None:
     """Display the manifest of vocabulary entries and their components."""
@@ -68,7 +56,7 @@ def main() -> None:
     
     # Print each word's status
     for vocab_dir in vocab_dirs:
-        vocab_path = os.path.join(VOCAB_BANK_DIR, vocab_dir)
+        vocab_path = os.path.join(paths.terms_dir, vocab_dir)
         print(HEADER_FORMAT.format(vocab_dir), end="")
         
         for component, filename in COMPONENTS.items():

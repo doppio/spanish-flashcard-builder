@@ -1,22 +1,22 @@
 import os
-from config import VOCAB_BANK_DIR
+from spanish_flashcard_builder.config import paths
 
 def remove_flashcard_data():
     """Remove all flashcard_data.json files from vocabulary entries."""
     count = 0
     
     # Ensure the vocab directory exists
-    if not os.path.exists(VOCAB_BANK_DIR):
-        print(f"Vocabulary directory not found: {VOCAB_BANK_DIR}")
+    if not os.path.exists(paths.terms_dir):
+        print(f"Vocabulary directory not found: {paths.terms_dir}")
         return
     
     # Iterate through all word folders
-    for folder_name in os.listdir(VOCAB_BANK_DIR):
-        folder_path = os.path.join(VOCAB_BANK_DIR, folder_name)
+    for folder_name in os.listdir(paths.terms_dir):
+        folder_path = os.path.join(paths.terms_dir, folder_name)
         if not os.path.isdir(folder_path):
             continue
             
-        flashcard_path = os.path.join(folder_path, "flashcard_data.json")
+        flashcard_path = os.path.join(folder_path, paths.augmented_term_filename)
         if os.path.exists(flashcard_path):
             try:
                 os.remove(flashcard_path)

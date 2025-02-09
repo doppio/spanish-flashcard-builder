@@ -7,15 +7,15 @@ from .commands import AcceptCommand, RejectCommand, UndoCommand, QuitCommand
 from .input_handler import handle_command_input
 from .state import State
 from .vocab_bank import VocabBank
-from spanish_flashcard_builder.config import CLEANED_SEARCH_WORD_FILE, VOCAB_BANK_DIR
+from spanish_flashcard_builder.config import paths
 
 def main() -> None:
-    word_list_path = Path(CLEANED_SEARCH_WORD_FILE)
+    word_list_path = paths.cleaned_vocab
     if not word_list_path.exists():
         print(f"File not found: {word_list_path}")
         sys.exit(1)
 
-    vocab_bank = VocabBank(VOCAB_BANK_DIR)
+    vocab_bank = VocabBank(paths.terms_dir)
     state = State()
 
     all_commands = [

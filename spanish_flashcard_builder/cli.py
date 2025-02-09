@@ -1,7 +1,7 @@
 import click
 from .vocab_selector.__main__ import main as select_main
 from .data_cleaner.__main__ import main as clean_main
-from .enrichment.__main__ import main as augment_main
+from .augmentation.__main__ import main as augment_main
 from .scripts.display_manifest import main as manifest_main
 from .scripts.download_spacy_model import download_spacy_model
 

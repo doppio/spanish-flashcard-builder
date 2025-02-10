@@ -9,43 +9,43 @@ from .scripts.download_spacy_model import download_spacy_model
 
 
 @click.group()
-def main():
+def main() -> None:
     """Spanish Flashcard Builder CLI"""
     pass
 
 
 @main.command()
-def clean():
+def clean() -> None:
     """Clean the vocabulary file"""
     clean_main()
 
 
 @main.command()
-def select():
+def select() -> None:
     """Select new vocabulary words"""
     select_main()
 
 
 @main.command()
-def augment():
+def augment() -> None:
     """Augment vocabulary entries with AI-generated content"""
     augment_main()
 
 
 @main.command()
-def images():
+def images() -> None:
     """Select images for vocabulary terms"""
     image_main()
 
 
 @main.command()
-def manifest():
+def manifest() -> None:
     """Display the current vocabulary manifest"""
     manifest_main()
 
 
 @main.command()
-def setup():
+def setup() -> None:
     """Download required spaCy model"""
     download_spacy_model()
 

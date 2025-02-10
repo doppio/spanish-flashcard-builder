@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 
 @dataclass
@@ -7,12 +7,12 @@ class AugmentedTerm:
     display_form: str  # e.g., "la silla", "el/la estudiante"
     definitions: str
     frequency_rating: int
-    example_sentences: list  # List of (Spanish, English) pairs
+    example_sentences: List[Tuple[str, str]]  # List of (Spanish, English) pairs
     image_search_query: str
     part_of_speech: str
     gender: Optional[str] = None
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         result = {
             "display_form": self.display_form,
             "part_of_speech": self.part_of_speech,

@@ -1,7 +1,7 @@
 from .augmentor import VocabAugmentor
 
 
-def main():
+def main() -> None:
     augmentor = VocabAugmentor()
     if not augmentor.process_all_pending():
         print("No words to process!")

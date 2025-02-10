@@ -2,7 +2,7 @@
 
 import tkinter as tk
 from tkinter import ttk
-from typing import Callable, Dict, List
+from typing import Any, Callable, Dict, List
 
 from PIL import Image, ImageTk
 
@@ -20,7 +20,7 @@ from .constants import (
 class ScrollableFrame:
     """A scrollable frame container with mouse wheel support."""
 
-    def __init__(self, parent: tk.Widget):
+    def __init__(self, parent: tk.Widget) -> None:
         self.canvas: tk.Canvas = tk.Canvas(parent)
         self.scrollbar: ttk.Scrollbar = ttk.Scrollbar(
             parent, orient="vertical", command=self.canvas.yview
@@ -38,11 +38,11 @@ class ScrollableFrame:
         self.canvas.bind("<Button-4>", self._on_mousewheel)
         self.canvas.bind("<Button-5>", self._on_mousewheel)
 
-    def _on_mousewheel(self, event):
+    def _on_mousewheel(self, event: tk.Event) -> None:
         scroll_direction = 1 if (event.num == 5 or event.delta < 0) else -1
         self.canvas.yview_scroll(scroll_direction, "units")
 
-    def pack(self, **kwargs):
+    def pack(self, **kwargs: Any) -> None:
         self.canvas.pack(side="left", fill="both", expand=True, padx=PADDING)
         self.scrollbar.pack(side="right", fill="y")
 
@@ -50,12 +50,12 @@ class ScrollableFrame:
 class TermInfoPanel:
     """Panel displaying term information including definition and example sentences."""
 
-    def __init__(self, parent: ttk.Frame, term_data: Dict):
+    def __init__(self, parent: ttk.Frame, term_data: Dict[str, Any]) -> None:
         self.frame: ttk.Frame = ttk.Frame(parent, padding="10")
-        self.term_data: Dict = term_data
+        self.term_data: Dict[str, Any] = term_data
         self._create_widgets()
 
-    def _create_widgets(self):
+    def _create_widgets(self) -> None:
         ttk.Label(
             self.frame,
             text=f"Term: {self.term_data.get('display_form', '')}",
@@ -77,7 +77,7 @@ class TermInfoPanel:
         if "example_sentences" in self.term_data:
             self._add_example_sentences()
 
-    def _add_example_sentences(self):
+    def _add_example_sentences(self) -> None:
         ttk.Label(self.frame, text="\nExample Sentences:", font=SUBTITLE_FONT).pack(
             anchor="w"
         )
@@ -91,14 +91,14 @@ class TermInfoPanel:
                 self.frame, text=f"   {example.get('en', '')}", font=ITALIC_FONT
             ).pack(anchor="w", padx=(20, 0))
 
-    def grid(self, **kwargs):
+    def grid(self, **kwargs: Any) -> None:
         self.frame.grid(**kwargs)
 
 
 class ImageGrid:
     """Grid display of selectable images with keyboard shortcuts (1-9, 0)."""
 
-    def __init__(self, parent: ttk.Frame, on_select: Callable[[int], None]):
+    def __init__(self, parent: ttk.Frame, on_select: Callable[[int], None]) -> None:
         self.frame: ttk.Frame = ttk.Frame(parent)
         self.on_select: Callable[[int], None] = on_select
         self.image_refs: List[ImageTk.PhotoImage] = []  # Prevent garbage collection
@@ -122,8 +122,11 @@ class ImageGrid:
             img_label = ttk.Label(frame, image=photo_image)
             img_label.pack()
 
-            for widget in (frame, number_label, img_label):
-                widget.bind("<Button-1>", lambda e, idx=image_idx: self.on_select(idx))
+            def click_handler(e: tk.Event, idx: int = image_idx) -> None:
+                return self.on_select(idx)
 
-    def grid(self, **kwargs):
+            for widget in (frame, number_label, img_label):
+                widget.bind("<Button-1>", click_handler)
+
+    def grid(self, **kwargs: Any) -> None:
         self.frame.grid(**kwargs)

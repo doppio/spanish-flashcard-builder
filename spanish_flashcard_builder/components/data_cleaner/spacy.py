@@ -1,14 +1,15 @@
 # Initialize spaCy
 import sys
+from typing import Optional
 
 import spacy
 
 from spanish_flashcard_builder.config import spacy_config
 
-nlp = None
+nlp: Optional[spacy.Language] = None
 
 
-def load_spacy_model():
+def load_spacy_model() -> spacy.Language:
     """
     Load the Spanish spaCy model.
 
@@ -37,7 +38,7 @@ def load_spacy_model():
     return nlp
 
 
-def canonicalize_word(word):
+def canonicalize_word(word: str) -> Optional[str]:
     """
     Convert a word to its canonical form using spaCy lemmatization.
     Only returns words that exist in the Spanish vocabulary.

@@ -1,9 +1,10 @@
-import spacy
+import spacy.cli
 
 from spanish_flashcard_builder.config import spacy_config
 
 
-def download_spacy_model():
+def download_spacy_model() -> None:
+    """Download the configured spaCy model."""
     print(f"Downloading spaCy model: {spacy_config.model_name}")
     try:
         spacy.cli.download(spacy_config.model_name)

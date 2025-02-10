@@ -1,7 +1,7 @@
 import json
 import os
 import string
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import requests
 
@@ -10,14 +10,17 @@ from spanish_flashcard_builder.config import api_keys, paths
 from .models import DictionaryEntry, DictionaryTerm
 
 
-def _fetch_mw_data(word):
+def _fetch_mw_data(word: str) -> Optional[List[Dict[str, Any]]]:
     """Fetches data from the Merriam-Webster API for a given word."""
 
     api_url = f"https://www.dictionaryapi.com/api/v3/references/spanish/json/{word}?key={api_keys.merriam_webster}"
     try:
         response = requests.get(api_url)
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        if not isinstance(data, list):
+            return None
+        return data
     except (requests.RequestException, json.JSONDecodeError):
         return None
 

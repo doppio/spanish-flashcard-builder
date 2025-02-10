@@ -7,7 +7,7 @@ from spanish_flashcard_builder.config import paths
 from .spacy import canonicalize_word, load_spacy_model
 
 
-def process_vocab_file():
+def process_vocab_file() -> None:
     """Process the raw vocabulary file and output cleaned version"""
 
     lemma_dict = defaultdict(set)
@@ -73,6 +73,6 @@ def process_vocab_file():
     print(f"Output written to {paths.cleaned_vocab}")
 
 
-def main():
+def main() -> None:
     """Main entry point for data cleaning functionality"""
     process_vocab_file()

@@ -3,7 +3,7 @@ import os
 from spanish_flashcard_builder.config import paths
 
 
-def remove_flashcard_data():
+def remove_flashcard_data() -> None:
     """Remove all flashcard_data.json files from vocabulary entries."""
     count = 0
 

@@ -1,7 +1,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import yaml
 from dotenv import load_dotenv
@@ -51,7 +51,7 @@ class _YamlConfig:
             logging.error(f"Error loading config file at {config_path}:\n{e}")
             raise ConfigError(f"Failed to load config: {e}") from e
 
-    def get_value(self, *keys: str, default: Any = None) -> Any:
+    def get_value(self, *keys: str, default: Optional[Any] = None) -> Any:
         """Safely get nested config values with optional default."""
         value = self.config
         for key in keys[:-1]:  # All but last key
@@ -62,7 +62,12 @@ class _YamlConfig:
 
     def get_path(self, *keys: str) -> Path:
         """Get a path value from config, joining with PROJECT_ROOT."""
-        return PROJECT_ROOT / self.get_value(*keys)
+        value = self.get_value(*keys)
+        if not isinstance(value, (str, Path)):
+            raise ConfigError(
+                f"Expected string or Path for path value, got {type(value)}"
+            )
+        return PROJECT_ROOT / value
 
 
 # Initialize Config instance
@@ -77,7 +82,7 @@ class _Paths:
         """Ensure directory exists, create if it doesn't."""
         path.mkdir(parents=True, exist_ok=True)
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Data paths
         self.data_dir = config.get_path(PATHS, DATA, DIR)
         self._ensure_dir(self.data_dir)
@@ -127,14 +132,14 @@ class _Anki:
 class _Spacy:
     """SpaCy model configuration."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.model_name: str = config.get_value(SPACY, "model_name")
 
 
 class _OpenAI:
     """OpenAI API configuration."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.model: str = config.get_value(OPENAI, "model")
         self.temperature: float = config.get_value(OPENAI, "temperature")
         self.validate()
@@ -152,12 +157,14 @@ class _OpenAI:
 class _Keys:
     """API key configuration."""
 
-    _instance = None
+    _instance: Optional["_Keys"] = None
 
-    def __new__(cls):
+    def __new__(cls) -> "_Keys":
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._init_keys()
+            instance = super().__new__(cls)
+            if hasattr(instance, "_init_keys"):
+                instance._init_keys()
+            cls._instance = instance
         return cls._instance
 
     def _init_keys(self) -> None:

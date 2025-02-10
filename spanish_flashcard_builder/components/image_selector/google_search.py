@@ -1,7 +1,7 @@
 """Google Custom Search API client for image search."""
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Dict, List, Optional, Union
 
 import requests
 
@@ -25,7 +25,7 @@ class GoogleImageSearch:
 
     BASE_URL = "https://customsearch.googleapis.com/customsearch/v1"
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.api_key = api_keys.google_search
         self.search_engine_id = api_keys.google_search_engine_id
 
@@ -40,7 +40,7 @@ class GoogleImageSearch:
         Returns:
             List of ImageResult objects
         """
-        params = {
+        params: Dict[str, Union[str, int]] = {
             "key": self.api_key,
             "cx": self.search_engine_id,
             "q": query,

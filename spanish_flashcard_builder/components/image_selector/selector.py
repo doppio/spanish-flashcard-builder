@@ -9,7 +9,7 @@ from PIL import Image
 
 from spanish_flashcard_builder.config import image_config, paths
 
-from .google_search import GoogleImageSearch
+from .google_search import GoogleImageSearch, ImageResult
 from .gui import ImageSelectorGUI
 
 
@@ -20,7 +20,7 @@ class ImageSelector:
     displaying options to user, and saving selected images.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.search = GoogleImageSearch()
         self.terms_dir = paths.terms_dir
 
@@ -33,7 +33,11 @@ class ImageSelector:
                 return None
 
             with open(augmented_file, "r", encoding="utf-8") as f:
-                return json.load(f)
+                data = json.load(f)
+                if not isinstance(data, dict):
+                    logging.error(f"Invalid JSON format in {term_dir}: expected dict")
+                    return None
+                return data
         except json.JSONDecodeError as e:
             logging.error(f"Error parsing augmented term file in {term_dir}: {e}")
             return None
@@ -87,16 +91,16 @@ class ImageSelector:
 
     def _search_images_for_term(
         self, term_dir: Path, term_data: Dict[str, Any]
-    ) -> Optional[List[str]]:
+    ) -> Optional[List[ImageResult]]:
         """Search for images based on the term data."""
         logging.info(f"Searching for images matching term '{term_dir.name}'")
-        image_urls = self.search.search_images(term_data["image_search_query"])
+        image_results = self.search.search_images(term_data["image_search_query"])
 
-        if not image_urls:
+        if not image_results:
             logging.warning(f"No images found for term {term_dir.name}")
             return None
 
-        return image_urls
+        return image_results
 
     def _handle_selection_result(
         self,
@@ -129,19 +133,19 @@ class ImageSelector:
         if not term_data:
             return True
 
-        image_urls = self._search_images_for_term(term_dir, term_data)
-        if not image_urls:
+        image_results = self._search_images_for_term(term_dir, term_data)
+        if not image_results:
             return True
 
         logging.info(f"Displaying image options for term '{term_dir.name}'...")
         selection_index, selected_image = self._handle_image_selection(
-            image_urls, term_data
+            image_results, term_data
         )
 
         return self._handle_selection_result(term_dir, selection_index, selected_image)
 
     def _handle_image_selection(
-        self, image_urls: List[str], term_data: Dict[str, Any]
+        self, image_results: List[ImageResult], term_data: Dict[str, Any]
     ) -> Tuple[Optional[int], Optional[Image.Image]]:
         """Display image options and handle user selection.
 
@@ -149,7 +153,7 @@ class ImageSelector:
             Tuple of (selection index, selected image)
             selection index: None=quit, -1=no suitable image
         """
-        gui = ImageSelectorGUI(image_urls, term_data)
+        gui = ImageSelectorGUI(image_results, term_data)
         selection_index = gui.run()
 
         if selection_index is None or selection_index == -1:

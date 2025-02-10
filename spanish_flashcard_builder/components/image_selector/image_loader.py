@@ -7,6 +7,7 @@ from typing import Dict, List, Optional
 
 import requests
 from PIL import Image
+from requests import Session
 
 from .google_search import ImageResult
 
@@ -14,9 +15,8 @@ from .google_search import ImageResult
 class ImageLoader:
     """Handles loading and processing of images from URLs."""
 
-    def __init__(self):
-        self.session = requests.Session()
-        self.session.request = requests.api.request
+    def __init__(self) -> None:
+        self.session: Session = requests.Session()
 
     def _fetch_image_bytes(self, url: str) -> Optional[bytes]:
         """Download image bytes from a URL."""

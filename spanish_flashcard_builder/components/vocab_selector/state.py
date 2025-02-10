@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, NoReturn, Optional
 
 from spanish_flashcard_builder.config import paths
 
@@ -41,21 +41,27 @@ class State:
                 logging.error("No headwords with entries found!")
                 sys.exit(1)
 
-    def current_term(self) -> Optional[DictionaryTerm]:
+    def current_term(self) -> DictionaryTerm:
         """Returns the current DictionaryTerm based on the headword index."""
         try:
             word = self._headwords[self._data.headword_index]
         except IndexError:
             logging.error("Global headword index out of range.")
-            return None
+            self._exit_with_error()
 
-        return self._get_term_for_headword(word)
+        term = self._get_term_for_headword(word)
+        if term is None:
+            logging.error(f"Failed to get term for headword: {word}")
+            self._exit_with_error()
+        return term
 
-    def current_entry(self) -> Optional[DictionaryEntry]:
+    def current_entry(self) -> DictionaryEntry:
         """Returns the current DictionaryEntry based on the entry index."""
         term = self.current_term()
-        if term is None or not term.entries:
-            return None
+        if not term.entries:
+            logging.error(f"No entries found for term: {term.headword}")
+            self._exit_with_error()
+
         try:
             return term.entries[self._data.entry_index]
         except IndexError:
@@ -64,7 +70,7 @@ class State:
                     self._data.entry_index, term.headword
                 )
             )
-            return None
+            self._exit_with_error()
 
     def commit_entry(self) -> None:
         """Advances to the next entry, or move to the next headword if at the end."""
@@ -98,14 +104,22 @@ class State:
         """Enters the runtime context related to this object."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self,
+        exc_type: Optional[type],
+        exc_val: Optional[Exception],
+        exc_tb: Optional[object],
+    ) -> None:
         """Exits the runtime context related to this object, saving history."""
         self._save_history()
 
     def _has_entries_for_current_word(self) -> bool:
         """Checks if the current headword has any entries."""
-        term = self.current_term()
-        return term is not None and len(term.entries) > 0
+        try:
+            term = self.current_term()
+            return len(term.entries) > 0
+        except Exception:
+            return False
 
     def _get_term_for_headword(self, word: str) -> Optional[DictionaryTerm]:
         """Retrieves the DictionaryTerm for a given headword.
@@ -196,3 +210,7 @@ class State:
                 json.dump(self._data.to_json(), f, indent=2)
         except IOError as e:
             logging.error(f"Error saving history to '{paths.selector_history}': {e}")
+
+    def _exit_with_error(self) -> NoReturn:
+        """Exit the program with an error status."""
+        sys.exit(1)

@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import shutil
+from typing import Dict, List, Union
 
 from .models import DictionaryEntry
 from .mw_api import download_audio, extract_audio_url
@@ -53,12 +54,14 @@ class VocabBank:
         return os.path.join(self.base_dir, str(entry_id))
 
 
-def save_word_data(word: str, word_folder: str, mw_data: dict) -> None:
+def save_word_data(
+    word: str, word_folder: str, mw_data: Union[Dict, List[Dict]]
+) -> None:
     # Save dictionary entry
     with open(os.path.join(word_folder, "merriam_webster_entry.json"), "w") as f:
         json.dump(mw_data, f)
 
     # Save audio
-    audio_url = extract_audio_url(mw_data)
+    audio_url = extract_audio_url([mw_data] if isinstance(mw_data, dict) else mw_data)
     if audio_url:
         download_audio(word, word_folder, audio_url)

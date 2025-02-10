@@ -4,7 +4,7 @@ import logging
 import tkinter
 import tkinter as tk
 from tkinter import ttk
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 from PIL import Image
 
@@ -27,7 +27,7 @@ from .image_loader import ImageLoader
 class ImageSelectorGUI:
     """GUI window for selecting images."""
 
-    def __init__(self, results: List[ImageResult], term_data: Dict):
+    def __init__(self, results: List[ImageResult], term_data: Dict[str, Any]) -> None:
         """Initialize the GUI with search results and term data."""
         self.results = results
         self.term_data = term_data
@@ -40,7 +40,7 @@ class ImageSelectorGUI:
         self._create_layout()
         self._load_and_display_images()
 
-    def _setup_window(self):
+    def _setup_window(self) -> None:
         """Configure the main window properties."""
         self.root.title("Flashcard Image Selector")
 
@@ -54,13 +54,13 @@ class ImageSelectorGUI:
         # Add keyboard shortcuts
         self.root.bind("<Key>", self._handle_key)
 
-    def _create_layout(self):
+    def _create_layout(self) -> None:
         """Create and arrange the GUI components."""
         # Add instructions
         ttk.Label(self.root, text=INSTRUCTIONS, padding=10, font=BODY_FONT).pack()
 
         # Create scrollable content area
-        self.scroll_container = ScrollableFrame(self.root)
+        self.scroll_container = ScrollableFrame(cast(tk.Widget, self.root))
         self.scroll_container.pack()
 
         # Add term information
@@ -73,14 +73,14 @@ class ImageSelectorGUI:
         self.image_grid = ImageGrid(self.scroll_container.frame, self._handle_selection)
         self.image_grid.grid(row=1, column=0, columnspan=GRID_COLUMNS)
 
-    def _load_and_display_images(self):
+    def _load_and_display_images(self) -> None:
         """Load and display the images."""
         # First load image bytes in background threads
         loader = ImageLoader()
         image_bytes_dict = loader.load_images(self.results)
 
         # Process images in the main thread
-        loaded_images = []
+        loaded_images: List[Tuple[int, Image.Image]] = []
         for idx, img_bytes in image_bytes_dict.items():
             img = loader._bytes_to_image(img_bytes)
             if img is not None:
@@ -91,7 +91,7 @@ class ImageSelectorGUI:
         loaded_images.sort(key=lambda x: x[0])
         self.image_grid.display_images(loaded_images)
 
-    def _show_processing_message(self, index: int):
+    def _show_processing_message(self, index: int) -> None:
         """Show the processing message after selection."""
         term = self.term_data.get("display_form", "term")
 
@@ -115,14 +115,14 @@ class ImageSelectorGUI:
         self.root.update()
         logging.info(f"Selected image {index + 1} for '{term}', processing...")
 
-    def _handle_selection(self, index: int):
+    def _handle_selection(self, index: int) -> None:
         """Handle image selection."""
         if 0 <= index < len(self.results) and index in self.full_images:
             self.selection = index
             self._show_processing_message(index)
             self.root.quit()
 
-    def _handle_key(self, event):
+    def _handle_key(self, event: tk.Event) -> None:
         """Handle keyboard input."""
         if event.char == "q":
             logging.info(QUIT_MSG)

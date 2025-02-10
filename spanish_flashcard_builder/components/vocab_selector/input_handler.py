@@ -1,10 +1,12 @@
 import os
 import sys
-from typing import List
+from typing import Any, List, Type, cast
 
 from .commands import Command
 from .models import DictionaryEntry, DictionaryTerm
 from .mw_api import print_mw_summary
+from .state import State
+from .vocab_bank import VocabBank
 
 
 def get_key_press() -> str:
@@ -13,7 +15,8 @@ def get_key_press() -> str:
     if os.name == "nt":
         import msvcrt
 
-        return msvcrt.getch().decode().lower()
+        msvcrt_any = cast(Any, msvcrt)  # Cast to Any to handle missing type hints
+        return cast(str, msvcrt_any.getch().decode().lower())
     else:
         import termios
         import tty
@@ -28,7 +31,7 @@ def get_key_press() -> str:
         return ch.lower()
 
 
-def format_help_text(commands: List[Command]) -> str:
+def format_help_text(commands: List[Type[Command]]) -> str:
     """Formats help text for a list of commands."""
 
     return ", ".join(f"{cmd.key}={cmd.help_text}" for cmd in commands)
@@ -37,9 +40,9 @@ def format_help_text(commands: List[Command]) -> str:
 def handle_command_input(
     entry: DictionaryEntry,
     word: DictionaryTerm,
-    commands: List[Command],
-    vocab_bank,
-    state,
+    commands: List[Type[Command]],
+    vocab_bank: VocabBank,
+    state: State,
 ) -> None:
     """Handles command input loop with specific available commands."""
 

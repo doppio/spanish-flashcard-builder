@@ -59,7 +59,7 @@ class TermInfoPanel:
         
         ttk.Label(
             self.frame,
-            text=f"Definition: {self.term_data.get('definition', '')}",
+            text=f"Definition: {self.term_data.get('definitions', '')}",
             font=SUBTITLE_FONT
         ).pack(anchor='w')
         

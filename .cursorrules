@@ -1,0 +1,69 @@
+# Code Guidelines
+
+## Core Principles
+
+1. EASY TO CHANGE
+   - Keep components loosely coupled
+   - Use dependency injection where possible
+   - Avoid hardcoding values - use config.yml
+   - Each component should have a single, well-defined responsibility
+
+2. SIMPLICITY
+   - Favor composition over inheritance
+   - Keep functions focused and small (single responsibility, under 50 lines)
+   - Use descriptive names over comments
+   - Minimize state management complexity
+
+3. CONSISTENCY
+   - Follow existing patterns for new components
+   - Use dataclasses for data models
+   - Keep CLI interface consistent across components
+   - Maintain similar file structure in each component
+
+## Code Style
+- Type hints are required
+- Use dataclasses for data models
+- Keep functions focused (single responsibility)
+- Use meaningful variable names
+- Document public APIs
+
+## Error Handling
+- Use custom exceptions for domain-specific errors
+- Log errors with appropriate context
+- Fail fast and explicitly
+- Provide user-friendly error messages
+
+## Testing
+- Write tests for core business logic
+- Mock external dependencies
+- Use fixtures for common test data
+- Test error cases explicitly
+
+## Configuration
+- All configurable values belong in config.yml
+- Environment variables for secrets only
+- Use strong typing for config values
+- Document all configuration options
+
+## Dependencies
+- Minimize external dependencies
+- Pin dependency versions
+- Document why each dependency is needed
+- Keep dependencies up to date
+
+## Documentation
+- READMEs should explain component purpose
+- Document non-obvious design decisions
+- Keep documentation close to code
+- Update docs when changing interfaces
+
+## Data Flow
+- Use typed models for data transfer
+- Validate data at boundaries
+- Keep data transformations explicit
+- Log important state changes
+
+## Security
+- Validate all external inputs
+- Use secure defaults
+- Follow principle of least privilege 

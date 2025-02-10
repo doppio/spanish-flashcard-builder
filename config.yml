@@ -19,6 +19,9 @@ paths:
         image: image.png
     deck: "spanish_vocabulary.apkg"
 
+images:
+  max_dimension: 1024  # Maximum size for Anki card images
+
 openai:
   model: "gpt-4o"
   temperature: 0.7

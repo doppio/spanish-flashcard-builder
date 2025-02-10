@@ -22,6 +22,7 @@ DIR = 'dir'
 ANKI_DECK = 'anki_deck'
 SPACY = 'spacy'
 OPENAI = 'openai'
+GOOGLE = 'google'
 
 class ConfigError(Exception):
     """Raised when there's an error in configuration."""
@@ -116,7 +117,7 @@ class _OpenAI:
             raise ConfigError("OpenAI model name cannot be empty")
 
 class _Keys:
-    """API key management."""
+    """API key configuration."""
     _instance = None
     
     def __new__(cls):
@@ -128,8 +129,9 @@ class _Keys:
     def _init_keys(self) -> None:
         """Initialize and validate API keys from environment variables."""
         self.merriam_webster = self._get_required_key("MERRIAM_WEBSTER_API_KEY")
-        self.bing = self._get_required_key("BING_API_KEY")
         self.openai = self._get_required_key("OPENAI_API_KEY")
+        self.google_search = self._get_required_key("GOOGLE_API_KEY")
+        self.google_search_engine_id = self._get_required_key("GOOGLE_SEARCH_ENGINE_ID")
     
     @staticmethod
     def _get_required_key(env_var: str) -> str:

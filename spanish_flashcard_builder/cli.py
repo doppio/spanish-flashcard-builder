@@ -2,6 +2,7 @@ import click
 from .vocab_selector.__main__ import main as select_main
 from .data_cleaner.__main__ import main as clean_main
 from .augmentation.__main__ import main as augment_main
+from .image_selector.__main__ import main as image_main
 from .scripts.display_manifest import main as manifest_main
 from .scripts.download_spacy_model import download_spacy_model
 
@@ -24,6 +25,11 @@ def select():
 def augment():
     """Augment vocabulary entries with AI-generated content"""
     augment_main()
+
+@main.command()
+def images():
+    """Select images for vocabulary terms"""
+    image_main()
 
 @main.command()
 def manifest():

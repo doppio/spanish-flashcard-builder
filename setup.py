@@ -21,6 +21,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
+            'spanish-flashcard-builder=spanish_flashcard_builder.cli:main',
             'sfb=spanish_flashcard_builder.cli:main',
         ],
     },

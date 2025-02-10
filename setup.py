@@ -14,7 +14,6 @@ setup(
         "python-dotenv>=0.19.0",
         "openai>=0.27.0",
         "pillow>=9.0.0",
-        "tqdm>=4.62.0",
         "spacy>=3.0.0",
         "click>=8.0.0",
         "pyyaml>=5.1",

@@ -50,7 +50,7 @@ class OpenAIClient:
             ]
             return AugmentedTerm(
                 display_form=data["display_form"],
-                definition=data["definition"],
+                definitions=data["definitions"],
                 frequency_rating=data["frequency_rating"],
                 example_sentences=example_sentences,
                 image_search_query=data["image_search_query"],

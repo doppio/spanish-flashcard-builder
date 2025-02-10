@@ -4,7 +4,7 @@ from typing import Optional
 @dataclass
 class AugmentedTerm:
     display_form: str  # e.g., "la silla", "el/la estudiante"
-    definition: str
+    definitions: str
     frequency_rating: int
     example_sentences: list  # List of (Spanish, English) pairs
     image_search_query: str
@@ -15,7 +15,7 @@ class AugmentedTerm:
         result = {
             "display_form": self.display_form,
             "part_of_speech": self.part_of_speech,
-            "definition": self.definition,
+            "definitions": self.definitions,
             "example_sentences": [
                 {"es": es, "en": en} 
                 for es, en in self.example_sentences

@@ -1,10 +1,28 @@
 import os
-from spanish_flashcard_builder.config import (
-    api_keys,
-    paths
-)
+from spanish_flashcard_builder.config import paths
 from .openai_api import OpenAIClient
 from .io import JSONFileEditor
+
+# For cross-platform single key detection
+try:
+    import msvcrt  # Windows
+except ImportError:
+    import sys
+    import tty
+    import termios
+
+    def getch():
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            ch = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return ch
+else:
+    def getch():
+        return msvcrt.getch().decode()
 
 class VocabAugmentor:
     def __init__(self, vocab_dir=None):
@@ -73,10 +91,16 @@ class VocabAugmentor:
             **augmented_data.to_dict()
         }
 
-        # Let user edit and save
-        if not self.json_editor.edit_json_in_editor(augmented_term):
-            print("Augmented data editing was cancelled")
-            return False
+        # Ask user if they want to edit
+        print("\nGenerated augmented data. Press 'e' to edit or SPACE to continue without editing...")
+        user_input = getch()
+        
+        if user_input.lower() == 'e':
+            if not self.json_editor.edit_json_in_editor(augmented_term):
+                print("Augmented data editing was cancelled")
+                return False
+        elif user_input == ' ':
+            print("Continuing without editing...")
 
         return self.json_editor.save_json(
             self._get_flashcard_path(folder_path),

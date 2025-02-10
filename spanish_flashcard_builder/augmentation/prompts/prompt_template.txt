@@ -3,7 +3,7 @@ Spanish word "{word}" ({part_of_speech}):
 
 Return JSON with:
 - display_form: Full form with articles/gender ("el hombre", "la casa", "el doctor / la doctora", "el/la estudiante", "grande", "pequeño / pequeña")
-- definition: Brief single definition using most common meaning from above
+- definitions: Brief single definition using most common meaning from above
 - frequency_rating: 1-10
 - example_sentences: 1-3 {{es, en}} pairs, ensuring each demonstrates unique usage. Err on the side of fewer if usages are similar.
 - image_search_query: Specific English description for a memorable image
@@ -13,7 +13,7 @@ Return JSON with:
 Example:
 {{
     "display_form": "la casa",
-    "definition": "house, home",
+    "definitions": "house, home",
     "frequency_rating": 10,
     "example_sentences": [
         {{"es": "Mi casa es azul.", "en": "My house is blue."}},

@@ -9,7 +9,7 @@ from .io import JSONFileEditor
 class VocabAugmentor:
     def __init__(self, vocab_dir=None):
         self.vocab_dir = vocab_dir or paths.terms_dir
-        self.openai_client = OpenAIClient(api_keys.openai)
+        self.openai_client = OpenAIClient()
         self.json_editor = JSONFileEditor()
 
     def process_all_pending(self):
@@ -56,7 +56,7 @@ class VocabAugmentor:
                 return None, None, None
                 
             return (
-                entry['meta']['id'].split(':')[0],  # word
+                entry.get('hwi', {}).get('hw', ''),
                 entry.get('fl', ''),                # part of speech
                 entry.get('shortdef', [])           # definitions
             )

@@ -1,13 +1,15 @@
 import json
-import openai
+from openai import OpenAI
+
 from typing import List
 from pathlib import Path
 from .models import AugmentedTerm
 from spanish_flashcard_builder.config import openai_config
+from spanish_flashcard_builder.config import api_keys
 
 class OpenAIClient:
-    def __init__(self, api_key: str):
-        openai.api_key = api_key
+    def __init__(self):
+        self.client = OpenAI(api_key=api_keys.openai)
         self.prompt_template = self._load_prompt_file("prompt_template.txt")
         self.system_instruction = self._load_prompt_file("system_instruction.txt")
 
@@ -18,16 +20,14 @@ class OpenAIClient:
 
     def augment_term(self, word: str, part_of_speech: str, definitions: List[str]) -> AugmentedTerm:
         prompt = self._build_prompt(word, part_of_speech, definitions)
-        
-        response = openai.ChatCompletion.create(
-            model=openai_config.model,
-            temperature=openai_config.temperature,
-            response_format={"type": "json_object"},
-            messages=[
-                {"role": "system", "content": self.system_instruction},
-                {"role": "user", "content": prompt}
-            ]
-        )
+
+        response = self.client.chat.completions.create(model=openai_config.model,
+        temperature=openai_config.temperature,
+        response_format={"type": "json_object"},
+        messages=[
+            {"role": "system", "content": self.system_instruction},
+            {"role": "user", "content": prompt}
+        ])
 
         print(response.choices[0].message.content)
         return self._parse_response(response.choices[0].message.content)

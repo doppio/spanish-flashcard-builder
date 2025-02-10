@@ -84,7 +84,7 @@ class VocabAugmentor:
         )
 
     def _get_mw_path(self, folder_path):
-        return os.path.join(folder_path, 'merriam_webster_entry.json')
+        return os.path.join(folder_path, paths.dictionary_entry_filename)
 
     def _get_flashcard_path(self, folder_path):
-        return os.path.join(folder_path, 'augmented_term.json')
+        return os.path.join(folder_path, paths.augmented_term_filename)

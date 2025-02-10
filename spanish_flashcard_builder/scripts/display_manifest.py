@@ -16,10 +16,10 @@ COMPONENT_FORMAT = "{:<12}"
 
 # Define components to check using config values
 COMPONENTS = {
-    'Dictionary': 'merriam_webster_entry.json',
-    'Audio': 'pronunciation.mp3',
-    'Flashcard': 'augmented_term.json',
-    'Image': 'image.png'
+    'Dictionary': paths.dictionary_entry_filename,
+    'Audio': paths.pronunciation_filename,
+    'Flashcard': paths.augmented_term_filename,
+    'Image': paths.image_filename
 }
 
 def bold(text: str) -> str:

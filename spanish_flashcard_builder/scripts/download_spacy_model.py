@@ -1,5 +1,7 @@
 import spacy
+
 from spanish_flashcard_builder.config import spacy_config
+
 
 def download_spacy_model():
     print(f"Downloading spaCy model: {spacy_config.model_name}")
@@ -9,5 +11,6 @@ def download_spacy_model():
     except Exception as e:
         print(f"Error downloading model: {e}")
 
+
 if __name__ == "__main__":
-    download_spacy_model() 
+    download_spacy_model()

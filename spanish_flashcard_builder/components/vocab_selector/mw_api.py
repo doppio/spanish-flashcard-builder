@@ -1,11 +1,14 @@
-import string
-from typing import Dict, List, Optional
-import requests
 import json
 import os
+import string
+from typing import Dict, List, Optional
+
+import requests
 
 from spanish_flashcard_builder.config import api_keys, paths
-from .models import DictionaryTerm, DictionaryEntry
+
+from .models import DictionaryEntry, DictionaryTerm
+
 
 def _fetch_mw_data(word):
     """Fetches data from the Merriam-Webster API for a given word."""
@@ -18,34 +21,36 @@ def _fetch_mw_data(word):
     except (requests.RequestException, json.JSONDecodeError):
         return None
 
+
 def look_up(search_word: str) -> Optional[DictionaryTerm]:
     """Gets valid Merriam-Webster data for a search word."""
 
     data = _fetch_mw_data(search_word)
     if not data or not isinstance(data, list) or not isinstance(data[0], dict):
         return None
-    
+
     matching_entries = []
     for entry in data:
         if isinstance(entry, dict):
             if entry.get("meta", {}).get("lang") != "es":
                 continue
-            
+
             headword = entry.get("hwi", {}).get("hw", "").replace("*", "")
-            
+
             if search_word == headword:
                 if entry.get("fl") and entry.get("shortdef"):
                     matching_entries.append(entry)
-    
+
     if not matching_entries:
         return None
-        
+
     dictionary_entries = [DictionaryEntry(entry) for entry in matching_entries]
     return DictionaryTerm(search_word, dictionary_entries)
 
+
 def extract_audio_url(mw_data: List[Dict]) -> Optional[str]:
     """Extracts the audio URL from Merriam-Webster data."""
-    
+
     if not mw_data:
         return None
     for entry in mw_data:
@@ -67,9 +72,10 @@ def extract_audio_url(mw_data: List[Dict]) -> Optional[str]:
                     return f"https://media.merriam-webster.com/audio/prons/es/me/mp3/{subdirectory}/{audio}.mp3"
     return None
 
+
 def download_audio(word: str, word_folder: str, audio_url: str) -> None:
     """Downloads pronunciation audio for a word."""
-    
+
     if not audio_url:
         print(f"No audio found for {word}.")
         return
@@ -83,9 +89,10 @@ def download_audio(word: str, word_folder: str, audio_url: str) -> None:
     except requests.RequestException as e:
         print(f"Error downloading audio for '{word}': {e}")
 
+
 def print_mw_summary(word: str, mw_data: List[Dict]) -> None:
     """Prints a summary of the Merriam-Webster data for a word."""
-    
+
     print("\n--- Merriam-Webster Data ---")
     if not mw_data:
         print("No data available.")

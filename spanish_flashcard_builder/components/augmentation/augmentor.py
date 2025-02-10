@@ -1,15 +1,17 @@
 import os
+
 from spanish_flashcard_builder.config import paths
-from .openai_api import OpenAIClient
+
 from .io import JSONFileEditor
+from .openai_api import OpenAIClient
 
 # For cross-platform single key detection
 try:
     import msvcrt  # Windows
 except ImportError:
     import sys
-    import tty
     import termios
+    import tty
 
     def getch():
         fd = sys.stdin.fileno()
@@ -21,8 +23,10 @@ except ImportError:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
         return ch
 else:
+
     def getch():
         return msvcrt.getch().decode()
+
 
 class VocabAugmentor:
     def __init__(self, vocab_dir=None):
@@ -33,14 +37,14 @@ class VocabAugmentor:
     def process_all_pending(self):
         """Augment all pending vocabulary words that need processing."""
         words_processed = False
-        
+
         # Sort the directory listing alphabetically
         for folder_name in sorted(os.listdir(self.vocab_dir)):
             folder_path = os.path.join(self.vocab_dir, folder_name)
             if self._needs_augmentation(folder_path):
                 print(f"Augmenting word in: {folder_path}")
                 words_processed |= self.augment_word(folder_path)
-                
+
         return words_processed
 
     def augment_word(self, folder_path):
@@ -56,7 +60,7 @@ class VocabAugmentor:
     def _needs_augmentation(self, folder_path):
         if not os.path.isdir(folder_path):
             return False
-            
+
         mw_path = self._get_mw_path(folder_path)
         flashcard_path = self._get_flashcard_path(folder_path)
         return os.path.exists(mw_path) and not os.path.exists(flashcard_path)
@@ -67,16 +71,16 @@ class VocabAugmentor:
             if isinstance(entry, str):
                 print(f"Unexpected Merriam-Webster entry format: {entry}")
                 return None, None, None
-                
+
             # Verify we have the expected structure before accessing
-            if not isinstance(entry, dict) or 'meta' not in entry:
+            if not isinstance(entry, dict) or "meta" not in entry:
                 print(f"Invalid Merriam-Webster entry format: {entry}")
                 return None, None, None
-                
+
             return (
-                entry.get('hwi', {}).get('hw', ''),
-                entry.get('fl', ''),                # part of speech
-                entry.get('shortdef', [])           # definitions
+                entry.get("hwi", {}).get("hw", ""),
+                entry.get("fl", ""),  # part of speech
+                entry.get("shortdef", []),  # definitions
             )
         except (IndexError, KeyError, AttributeError) as e:
             print(f"Error parsing MW data: {e}")
@@ -85,26 +89,25 @@ class VocabAugmentor:
     def _generate_augmented_term_file(self, folder_path, word, pos, definitions):
         """Generate AI-augmented data and save after user review."""
         augmented_data = self.openai_client.augment_term(word, pos, definitions)
-        
-        augmented_term = {
-            'word': word,
-            **augmented_data.to_dict()
-        }
+
+        augmented_term = {"word": word, **augmented_data.to_dict()}
 
         # Ask user if they want to edit
-        print("\nGenerated augmented data. Press 'e' to edit or SPACE to continue without editing...")
+        print(
+            "\nGenerated augmented data. "
+            "Press 'e' to edit or SPACE to continue without editing..."
+        )
         user_input = getch()
-        
-        if user_input.lower() == 'e':
+
+        if user_input.lower() == "e":
             if not self.json_editor.edit_json_in_editor(augmented_term):
                 print("Augmented data editing was cancelled")
                 return False
-        elif user_input == ' ':
+        elif user_input == " ":
             print("Continuing without editing...")
 
         return self.json_editor.save_json(
-            self._get_flashcard_path(folder_path),
-            augmented_term
+            self._get_flashcard_path(folder_path), augmented_term
         )
 
     def _get_mw_path(self, folder_path):

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
+
 @dataclass
 class AugmentedTerm:
     display_form: str  # e.g., "la silla", "el/la estudiante"
@@ -17,11 +18,10 @@ class AugmentedTerm:
             "part_of_speech": self.part_of_speech,
             "definitions": self.definitions,
             "example_sentences": [
-                {"es": es, "en": en} 
-                for es, en in self.example_sentences
+                {"es": es, "en": en} for es, en in self.example_sentences
             ],
             "frequency_rating": self.frequency_rating,
-            "image_search_query": self.image_search_query
+            "image_search_query": self.image_search_query,
         }
         if self.gender is not None:
             result["gender"] = self.gender

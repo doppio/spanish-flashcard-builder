@@ -1,4 +1,5 @@
 .env
+
 data/
 output/
 
@@ -6,3 +7,5 @@ output/
 __pycache__/
 *.egg-info/
 build/
+
+.ruff_cache/

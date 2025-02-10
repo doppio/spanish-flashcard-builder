@@ -1,15 +1,15 @@
-import os
 import json
-import shutil
 import logging
+import os
+import shutil
 
-from .mw_api import download_audio, extract_audio_url
 from .models import DictionaryEntry
-from spanish_flashcard_builder.config import paths
+from .mw_api import download_audio, extract_audio_url
+
 
 class VocabBank:
     """Handles saving dictionary entries and their audio files to disk."""
-    
+
     def __init__(self, base_dir: str) -> None:
         """Initializes with base directory for saving entries."""
         self.base_dir = base_dir
@@ -35,11 +35,11 @@ class VocabBank:
         """Saves a dictionary entry using the DictionaryEntry model"""
         entry_dir = self._get_entry_path(entry.id)
         os.makedirs(entry_dir, exist_ok=True)
-        
+
         print(f"Saving entry '{entry.id}'")
-        with open(os.path.join(entry_dir, 'merriam_webster_entry.json'), 'w') as f:
+        with open(os.path.join(entry_dir, "merriam_webster_entry.json"), "w") as f:
             json.dump(entry.raw_data, f, indent=2)
-            
+
         audio_url = extract_audio_url([entry.raw_data])
         if audio_url:
             download_audio(entry.headword, entry_dir, audio_url)
@@ -52,11 +52,12 @@ class VocabBank:
         """Get directory path for a dictionary entry."""
         return os.path.join(self.base_dir, str(entry_id))
 
-def save_word_data(word_folder, mw_data):
+
+def save_word_data(word: str, word_folder: str, mw_data: dict) -> None:
     # Save dictionary entry
-    with open(os.path.join(word_folder, 'merriam_webster_entry.json'), 'w') as f:
+    with open(os.path.join(word_folder, "merriam_webster_entry.json"), "w") as f:
         json.dump(mw_data, f)
-    
+
     # Save audio
     audio_url = extract_audio_url(mw_data)
     if audio_url:

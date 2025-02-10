@@ -19,7 +19,7 @@ OUTPUT = 'output'
 TERMS = 'terms'
 COMPONENTS = 'components'
 DIR = 'dir'
-ANKI = 'anki'
+ANKI_DECK = 'anki_deck'
 SPACY = 'spacy'
 OPENAI = 'openai'
 
@@ -93,8 +93,8 @@ class _Paths:
 
 class _Anki:
     """Anki deck configuration."""
-    deck_name: str = config.get_value(ANKI, 'deck_name')
-    deck_id: int = config.get_value(ANKI, 'deck_id')
+    deck_name: str = config.get_value(ANKI_DECK, 'deck_name')
+    deck_id: int = config.get_value(ANKI_DECK, 'deck_id')
 
 class _Spacy:
     """SpaCy model configuration."""

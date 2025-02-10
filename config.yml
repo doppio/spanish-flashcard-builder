@@ -1,6 +1,6 @@
-anki:
-  deck_name: "Spanish Vocabulary"
-  deck_id: 7262245122
+anki_deck:
+  name: "Spanish Vocabulary"
+  id: 7262245122
 
 paths:
   data:

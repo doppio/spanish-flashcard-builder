@@ -1,19 +1,14 @@
-# Image Selector Module
+# Image selector
 
-This step of the pipeline provides a GUI for selecting appropriate flashcard images.
+This tool provides a GUI for selecting memorable flashcard images. It processes terms from the output dictionary that:
+1. Have completed the `augmentation` step (which generates an image search query string)
+2. Don't already have an associated image
 
-## Features
-
-- Searches for relevant images using Google Custom Search API
-- Displays a grid of image options for each vocabulary term
-- Supports selection by number key or by clicking the image
-- Automatically resizes and optimizes selected images for flashcard use
+Using the Google Custom Search API, it searches for images matching the query string and displays them in a grid. The user can then select an image to use for the term's flashcard.
 
 ## Usage
 
-The step of the pipeline can be run using package's CLI:
+Run the image selection tool using the package's CLI:
 ```bash
 sfb images
 ```
-
-This will process all vocabulary terms that don't yet have associated images, allowing you to interactively select a memorable image for each term's flashcard.

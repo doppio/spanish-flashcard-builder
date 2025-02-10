@@ -1,8 +1,8 @@
 import click
-from .vocab_selector.__main__ import main as select_main
-from .data_cleaner.__main__ import main as clean_main
-from .augmentation.__main__ import main as augment_main
-from .image_selector.__main__ import main as image_main
+from .components.vocab_selector.__main__ import main as select_main
+from .components.data_cleaner.__main__ import main as clean_main
+from .components.augmentation.__main__ import main as augment_main
+from .components.image_selector.__main__ import main as image_main
 from .scripts.display_manifest import main as manifest_main
 from .scripts.download_spacy_model import download_spacy_model
 

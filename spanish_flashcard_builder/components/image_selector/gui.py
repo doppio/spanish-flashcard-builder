@@ -74,12 +74,20 @@ class ImageSelectorGUI:
 
     def _load_and_display_images(self):
         """Load and display the images."""
+        # First load image bytes in background threads
         loader = ImageLoader()
-        loaded_images = loader.load_images(self.results)
+        image_bytes_dict = loader.load_images(self.results)
         
-        # Store full-size images and display previews
-        for idx, img in loaded_images:
-            self.full_images[idx] = img
+        # Process images in the main thread
+        loaded_images = []
+        for idx, img_bytes in image_bytes_dict.items():
+            img = loader._bytes_to_image(img_bytes)
+            if img is not None:
+                self.full_images[idx] = img
+                loaded_images.append((idx, img))
+        
+        # Sort images by index and display in main thread
+        loaded_images.sort(key=lambda x: x[0])
         self.image_grid.display_images(loaded_images)
 
     def _show_processing_message(self, index: int):

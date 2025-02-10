@@ -23,6 +23,7 @@ ANKI_DECK = 'anki_deck'
 SPACY = 'spacy'
 OPENAI = 'openai'
 GOOGLE = 'google'
+IMAGES = 'images'
 
 class ConfigError(Exception):
     """Raised when there's an error in configuration."""
@@ -92,6 +93,10 @@ class _Paths:
         self.pronunciation_filename = config.get_value(PATHS, OUTPUT, TERMS, COMPONENTS, 'pronunciation')
         self.image_filename = config.get_value(PATHS, OUTPUT, TERMS, COMPONENTS, 'image')
 
+class _Image:
+    """Image configuration."""
+    max_dimension: int = config.get_value(IMAGES, 'max_dimension')
+
 class _Anki:
     """Anki deck configuration."""
     deck_name: str = config.get_value(ANKI_DECK, 'deck_name')
@@ -146,3 +151,4 @@ paths = _Paths()
 api_keys = _Keys()
 spacy_config = _Spacy()
 openai_config = _OpenAI()
+image_config = _Image()

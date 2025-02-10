@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional, Dict, List, Tuple, Any
 from PIL import Image
 
-from spanish_flashcard_builder.config import paths, config
+from spanish_flashcard_builder.config import paths, image_config
 from .google_search import GoogleImageSearch
 from .gui import ImageSelectorGUI
 
@@ -43,7 +43,7 @@ class ImageSelector:
         try:
             processed_image = image.copy()
             original_dimensions = processed_image.size
-            max_dimension = config['images']['max_dimension']
+            max_dimension = image_config.max_dimension
             processed_image.thumbnail((max_dimension, max_dimension), Image.Resampling.LANCZOS)
             logging.info(f"Resized image from {original_dimensions} to {processed_image.size}")
             

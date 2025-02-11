@@ -1,12 +1,132 @@
+"""File I/O utilities for content generation."""
+
 import json
 import logging
 import os
 import subprocess
 import tempfile
+from pathlib import Path
 from typing import Any, Dict, Optional
+
+from spanish_flashcard_builder.exceptions import ValidationError
+
+logger = logging.getLogger(__name__)
 
 
 class JSONFileEditor:
+    """Interactive JSON file editor."""
+
+    def __init__(self, editor_cmd: Optional[str] = None) -> None:
+        """Initialize the JSON file editor.
+
+        Args:
+            editor_cmd: Command to launch the editor. If None, uses EDITOR
+                env var or 'vim'.
+        """
+        editor = editor_cmd or os.environ.get("EDITOR", "vim")
+        assert isinstance(editor, str)
+        self.editor_cmd: str = editor
+
+    def edit_json_in_editor(self, data: Dict[str, Any]) -> bool:
+        """Open JSON data in an editor for user review/modification.
+
+        Args:
+            data: Dictionary to edit
+
+        Returns:
+            True if the edit was successful and saved, False if cancelled
+
+        Raises:
+            ValidationError: If the edited JSON is invalid
+        """
+        try:
+            # Create temp file
+            with tempfile.NamedTemporaryFile(
+                suffix=".json", mode="w", delete=False
+            ) as temp_file:
+                # Write initial JSON
+                json.dump(data, temp_file, indent=2, ensure_ascii=False)
+                temp_path = temp_file.name
+
+            # Get file modification time
+            mtime_before = Path(temp_path).stat().st_mtime
+
+            # Open editor
+            try:
+                subprocess.run([self.editor_cmd, temp_path], check=True)
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Editor process failed: {e}")
+                return False
+
+            # Check if file was modified
+            mtime_after = Path(temp_path).stat().st_mtime
+            if mtime_after == mtime_before:
+                logger.info("No changes made in editor")
+                return False
+
+            # Read and validate edited content
+            with open(temp_path, encoding="utf-8") as f:
+                try:
+                    edited_data = json.load(f)
+                except json.JSONDecodeError as err:
+                    raise ValidationError(f"Invalid JSON: {err}") from err
+
+            # Validate structure
+            self._validate_content(edited_data)
+            data.clear()
+            data.update(edited_data)
+            return True
+
+        finally:
+            # Clean up temp file
+            try:
+                os.unlink(temp_path)
+            except Exception as e:
+                logger.warning(f"Failed to delete temp file {temp_path}: {e}")
+
+    def _validate_content(self, data: Dict[str, Any]) -> None:
+        """Validate the structure of edited content.
+
+        Args:
+            data: The edited data to validate
+
+        Raises:
+            ValidationError: If the content structure is invalid
+        """
+        required_fields = {
+            "term": str,
+            "definitions": str,
+            "frequency_rating": int,
+            "example_sentences": list,
+            "image_search_query": str,
+            "part_of_speech": str,
+        }
+
+        # Check required fields and types
+        for field, expected_type in required_fields.items():
+            if field not in data:
+                raise ValidationError(f"Missing required field: {field}")
+            if not isinstance(data[field], expected_type):
+                raise ValidationError(
+                    f"Invalid type for {field}: expected {expected_type.__name__}, "
+                    f"got {type(data[field]).__name__}"
+                )
+
+        # Validate example sentences
+        for i, sentence in enumerate(data["example_sentences"]):
+            if not isinstance(sentence, dict):
+                raise ValidationError(
+                    f"Example sentence {i} must be a dictionary with 'es' and 'en' keys"
+                )
+            if "es" not in sentence or "en" not in sentence:
+                raise ValidationError(
+                    f"Example sentence {i} missing required 'es' or 'en' translation"
+                )
+
+        # Validate frequency rating range
+        if not 1 <= data["frequency_rating"] <= 10:
+            raise ValidationError("Frequency rating must be between 1 and 10")
+
     def load_json(self, path: str) -> Optional[Dict[str, Any]]:
         """Load and parse JSON from file."""
         try:
@@ -79,20 +199,4 @@ class JSONFileEditor:
                 return True
         except json.JSONDecodeError as e:
             print(f"\nError: Invalid JSON format after editing: {e}")
-            return False
-
-    def edit_json_in_editor(self, data: Dict[str, Any]) -> bool:
-        """Open system text editor for JSON modification."""
-        # First display the content
-        print("\nGenerated content:")
-        print(json.dumps(data, indent=2, ensure_ascii=False))
-        print("\nPress SPACE to accept, 'e' to edit, any other key to reject")
-
-        ch = self._get_single_keypress()
-
-        if ch == " ":  # Space to accept
-            return True
-        elif ch.lower() == "e":  # 'e' to edit
-            return self._edit_in_external_editor(data)
-        else:  # Any other key to reject
             return False

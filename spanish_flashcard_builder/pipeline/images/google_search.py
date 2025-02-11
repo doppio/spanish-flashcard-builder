@@ -1,7 +1,7 @@
 """Google Custom Search API client for image search."""
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Union
 
 import requests
 
@@ -78,20 +78,20 @@ class GoogleImageSearch:
             print(f"Error searching for images: {e}")
             return []
 
-    def download_image(self, url: str) -> Optional[bytes]:
-        """
-        Download an image from the given URL.
+    def download_image(self, url: str) -> bytes | None:
+        """Download an image from a URL.
 
         Args:
-            url: URL of the image to download
+            url: The URL of the image to download.
 
         Returns:
-            Image data as bytes if successful, None otherwise
+            The image bytes if successful, None otherwise.
         """
         try:
             response = requests.get(url, stream=True)
             response.raise_for_status()
-            return response.content
+            content: bytes = response.content
+            return content
         except requests.RequestException as e:
             print(f"Error downloading image: {e}")
             return None

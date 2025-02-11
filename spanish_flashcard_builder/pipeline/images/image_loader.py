@@ -18,12 +18,13 @@ class ImageLoader:
     def __init__(self) -> None:
         self.session: Session = requests.Session()
 
-    def _fetch_image_bytes(self, url: str) -> Optional[bytes]:
+    def _fetch_image_bytes(self, url: str) -> bytes | None:
         """Download image bytes from a URL."""
         try:
             response = self.session.get(url, stream=True, timeout=(1.5, 3))
             response.raise_for_status()
-            return response.content
+            content: bytes = response.content
+            return content
         except Exception as e:
             logging.debug(f"Failed to load image from {url}: {e}")
             return None

@@ -23,9 +23,9 @@
 ## Code Style
 - Type hints are required
 - Use dataclasses for data models
+- Respect ruff and mypy rules in pyproject.toml
 - Keep functions focused (single responsibility)
 - Use meaningful variable names
-- Document public APIs
 
 ## Error Handling
 - Use custom exceptions for domain-specific errors

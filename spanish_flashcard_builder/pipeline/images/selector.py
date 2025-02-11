@@ -27,7 +27,7 @@ class ImageSelector:
     def _load_augmented_term(self, term_dir: Path) -> Optional[Dict[str, Any]]:
         """Load the augmented term data from a term directory."""
         try:
-            augmented_file = term_dir / paths.augmented_term_filename
+            augmented_file = term_dir / paths.flashcard_filename
             if not augmented_file.exists():
                 logging.warning(f"No augmented term file found in {term_dir}")
                 return None

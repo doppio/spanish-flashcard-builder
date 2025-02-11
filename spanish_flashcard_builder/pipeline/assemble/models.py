@@ -1,3 +1,5 @@
+"""Models for Anki note generation."""
+
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -7,7 +9,7 @@ import genanki
 
 from spanish_flashcard_builder.config import anki_config
 
-from .templates import load_template, render_template
+from .template import load_template, render_template
 
 # Type aliases for clarity
 ExampleSentence = Tuple[str, str]  # (Spanish, English)

@@ -18,7 +18,7 @@ PIPELINE_FORMAT = "{:<12}"
 # Define pipeline stages to check using config values
 PIPELINE_STAGES = {
     "Dictionary": paths.dictionary_entry_filename,
-    "Flashcard": paths.augmented_term_filename,
+    "Flashcard": paths.flashcard_filename,
 }
 
 

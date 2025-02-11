@@ -62,7 +62,7 @@ def canonicalize_word(word: str) -> Optional[str]:
     for token in doc:
         # Check if the word exists in Spanish vocabulary
         if not token.is_oov and token.pos_ in allowed_pos:
-            return token.lemma_
+            return str(token.lemma_)
     return None
 
 

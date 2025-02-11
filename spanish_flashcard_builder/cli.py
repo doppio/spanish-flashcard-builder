@@ -7,7 +7,8 @@ from .pipeline.generate.__main__ import main as generate_main
 from .pipeline.images.__main__ import main as image_main
 
 # Utility scripts
-from .scripts.clean import TARGETS, clean
+from .scripts.clean import TARGETS
+from .scripts.clean import clean as clean_files
 from .scripts.download_spacy_model import download_spacy_model
 from .scripts.manifest import main as manifest_main
 from .scripts.sanitize import main as sanitize_main
@@ -45,12 +46,12 @@ def sanitize() -> None:
     type=click.Choice(list(TARGETS.keys())),
 )
 @click.option("--force", "-f", is_flag=True, help="Skip confirmation prompt")
-def clean_data(component: str, force: bool) -> None:
+def clean(component: str, force: bool) -> None:
     """Remove component data"""
     if force or click.confirm(
         f"This will remove all {component} files. Are you sure?", default=False
     ):
-        clean(component)
+        clean_files(component)
     else:
         click.echo("Operation cancelled")
 

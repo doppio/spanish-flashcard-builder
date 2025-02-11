@@ -103,7 +103,7 @@ class _Paths:
         self.deck_file = self.output_dir / config.get_value(PATHS, OUTPUT, "deck")
 
         self.dictionary_entry_filename = "merriam_webster_entry.json"
-        self.augmented_term_filename = "flashcard_data.json"
+        self.flashcard_filename = "flashcard.json"
 
     def get_pronunciation_filename(self, term_dir: Path) -> str:
         """Get the pronunciation filename based on the term directory name."""

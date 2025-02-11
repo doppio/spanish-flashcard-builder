@@ -1,5 +1,8 @@
 # Image selector
 
+Before running this component, you must:
+1. Have completed the `generate` step (which generates an image search query string)
+
 This tool provides a GUI for selecting memorable flashcard images. It processes terms from the output dictionary that:
 1. Have completed the `augmentation` step (which generates an image search query string)
 2. Don't already have an associated image

@@ -60,7 +60,7 @@ class ImageSelector:
                 f"Resized image from {original_dimensions} to {processed_image.size}"
             )
 
-            output_path = term_dir / paths.image_filename
+            output_path = term_dir / paths.get_image_filename(term_dir)
             processed_image.save(output_path, "PNG")
             logging.info(f"Successfully saved image to {output_path}")
             return True
@@ -81,7 +81,7 @@ class ImageSelector:
             if not term_dir.is_dir():
                 continue
 
-            image_path = term_dir / paths.image_filename
+            image_path = term_dir / paths.get_image_filename(term_dir)
             if not image_path.exists():
                 pending_dirs.append(term_dir)
             else:

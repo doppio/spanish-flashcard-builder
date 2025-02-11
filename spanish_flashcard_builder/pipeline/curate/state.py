@@ -51,7 +51,10 @@ class State:
 
         term = self._get_term_for_headword(word)
         if term is None:
-            logging.error(f"Failed to get term for headword: {word}")
+            logging.warning(f"Failed to get term for headword: {word}, skipping...")
+            if self._go_to_next_headword():
+                return self.current_term()
+            logging.error("No more valid terms found")
             self._exit_with_error()
         return term
 
@@ -76,9 +79,14 @@ class State:
         """Advances to the next entry, or move to the next headword if at the end."""
         self._data.entry_index += 1
         current_word = self.current_term().headword
-        if self._data.entry_index >= self._data.headword_entry_count.get(
-            current_word, 0
-        ):
+        entry_count = self._data.headword_entry_count.get(current_word)
+
+        if entry_count is None:
+            logging.error(f"No entry count found for word '{current_word}'")
+            self._data.headword_entry_count[current_word] = 0
+            entry_count = 0
+
+        if self._data.entry_index >= entry_count:
             if not self._go_to_next_headword():
                 logging.info("Reached the end of the vocabulary list.")
         self._save_history()
@@ -116,7 +124,11 @@ class State:
     def _has_entries_for_current_word(self) -> bool:
         """Checks if the current headword has any entries."""
         try:
-            term = self.current_term()
+            term = self._get_term_for_headword(
+                self._headwords[self._data.headword_index]
+            )
+            if term is None:
+                return False
             return len(term.entries) > 0
         except Exception:
             return False
@@ -186,30 +198,32 @@ class State:
     def _load_headword_list(self) -> List[str]:
         """Loads the list of headwords from a file."""
         try:
-            with open(paths.cleaned_vocab, encoding="utf-8") as f:
-                return [line.strip().split()[0] for line in f if line.strip()]
-        except IOError as e:
-            logging.error(f"Error loading word list from '{paths.cleaned_vocab}': {e}")
+            with open(paths.sanitized_vocab, encoding="utf-8") as f:
+                return [line.strip() for line in f if line.strip()]
+        except Exception as e:
+            logging.error(
+                f"Error loading word list from '{paths.sanitized_vocab}': {e}"
+            )
             sys.exit(1)
 
     def _load_history(self) -> None:
         """Loads the state history from a file."""
-        if not os.path.exists(paths.selector_history):
+        if not os.path.exists(paths.curator_history):
             return
         try:
-            with open(paths.selector_history, "r", encoding="utf-8") as f:
+            with open(paths.curator_history, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 self._data = _StateData.from_json(data)
         except (IOError, json.JSONDecodeError) as e:
-            logging.error(f"Error loading history from '{paths.selector_history}': {e}")
+            logging.error(f"Error loading history from '{paths.curator_history}': {e}")
 
     def _save_history(self) -> None:
         """Saves the current state history to a file."""
         try:
-            with open(paths.selector_history, "w", encoding="utf-8") as f:
+            with open(paths.curator_history, "w", encoding="utf-8") as f:
                 json.dump(self._data.to_json(), f, indent=2)
         except IOError as e:
-            logging.error(f"Error saving history to '{paths.selector_history}': {e}")
+            logging.error(f"Error saving history to '{paths.curator_history}': {e}")
 
     def _exit_with_error(self) -> NoReturn:
         """Exit the program with an error status."""

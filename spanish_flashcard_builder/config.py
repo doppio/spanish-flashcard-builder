@@ -17,9 +17,10 @@ PATHS = "paths"
 DATA = "data"
 OUTPUT = "output"
 TERMS = "terms"
-COMPONENTS = "components"
+PIPELINE = "pipeline"
 DIR = "dir"
-ANKI_DECK = "anki_deck"
+ANKI = "anki"
+ANKI_DECK = "deck"
 SPACY = "spacy"
 OPENAI = "openai"
 GOOGLE = "google"
@@ -87,11 +88,11 @@ class _Paths:
         self.data_dir = config.get_path(PATHS, DATA, DIR)
         self._ensure_dir(self.data_dir)
         self.raw_vocab = self.data_dir / config.get_value(PATHS, DATA, "raw_vocab")
-        self.cleaned_vocab = self.data_dir / config.get_value(
-            PATHS, DATA, "cleaned_vocab"
+        self.sanitized_vocab = self.data_dir / config.get_value(
+            PATHS, DATA, "sanitized_vocab"
         )
-        self.selector_history = self.data_dir / config.get_value(
-            PATHS, DATA, "selector_history"
+        self.curator_history = self.data_dir / config.get_value(
+            PATHS, DATA, "curator_history"
         )
 
         # Output paths
@@ -101,19 +102,16 @@ class _Paths:
         self._ensure_dir(self.terms_dir)
         self.deck_file = self.output_dir / config.get_value(PATHS, OUTPUT, "deck")
 
-        # Term component filenames
-        self.dictionary_entry_filename = config.get_value(
-            PATHS, OUTPUT, TERMS, COMPONENTS, "dictionary_entry"
-        )
-        self.augmented_term_filename = config.get_value(
-            PATHS, OUTPUT, TERMS, COMPONENTS, "augmented_term"
-        )
-        self.pronunciation_filename = config.get_value(
-            PATHS, OUTPUT, TERMS, COMPONENTS, "pronunciation"
-        )
-        self.image_filename = config.get_value(
-            PATHS, OUTPUT, TERMS, COMPONENTS, "image"
-        )
+        self.dictionary_entry_filename = "merriam_webster_entry.json"
+        self.augmented_term_filename = "flashcard_data.json"
+
+    def get_pronunciation_filename(self, term_dir: Path) -> str:
+        """Get the pronunciation filename based on the term directory name."""
+        return f"{term_dir.name}.mp3"
+
+    def get_image_filename(self, term_dir: Path) -> str:
+        """Get the image filename based on the term directory name."""
+        return f"{term_dir.name}.png"
 
 
 class _Image:
@@ -125,8 +123,10 @@ class _Image:
 class _Anki:
     """Anki deck configuration."""
 
-    deck_name: str = config.get_value(ANKI_DECK, "deck_name")
-    deck_id: int = config.get_value(ANKI_DECK, "deck_id")
+    deck_filename: str = config.get_value(ANKI, ANKI_DECK, "filename")
+    deck_name: str = config.get_value(ANKI, ANKI_DECK, "name")
+    deck_id: int = config.get_value(ANKI, ANKI_DECK, "id")
+    model_id: int = config.get_value(ANKI, "model_id")
 
 
 class _Spacy:
@@ -189,3 +189,4 @@ api_keys = _Keys()
 spacy_config = _Spacy()
 openai_config = _OpenAI()
 image_config = _Image()
+anki_config = _Anki()

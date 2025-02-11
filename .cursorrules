@@ -33,12 +33,6 @@
 - Fail fast and explicitly
 - Provide user-friendly error messages
 
-## Testing
-- Write tests for core business logic
-- Mock external dependencies
-- Use fixtures for common test data
-- Test error cases explicitly
-
 ## Configuration
 - All configurable values belong in config.yml
 - Environment variables for secrets only

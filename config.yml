@@ -1,22 +1,20 @@
-anki_deck:
-  name: "Spanish Vocabulary"
-  id: 7262245122
+anki:
+  deck:
+    filename: "spanish_vocabulary.apkg"
+    name: "Spanish Vocabulary"
+    id: 7262245122
+  model_id: 2600788583
 
 paths:
   data:
     dir: data
     raw_vocab: raw_vocab.txt
-    cleaned_vocab: cleaned_vocab.txt
-    selector_history: vocab_selector_history.json
+    sanitized_vocab: sanitized_vocab.txt
+    curator_history: curator_history.json
   output:
     dir: output
     terms:
       dir: terms
-      components:
-        dictionary_entry: merriam_webster_entry.json
-        augmented_term: llm_augmented_term.json
-        pronunciation: pronunciation.mp3
-        image: image.png
     deck: "spanish_vocabulary.apkg"
 
 images:

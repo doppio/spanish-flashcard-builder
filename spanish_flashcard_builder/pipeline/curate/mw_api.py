@@ -1,6 +1,6 @@
 import json
-import os
 import string
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -85,7 +85,8 @@ def download_audio(word: str, word_folder: str, audio_url: str) -> None:
     try:
         response = requests.get(audio_url)
         response.raise_for_status()
-        audio_path = os.path.join(word_folder, paths.pronunciation_filename)
+        folder_path = Path(word_folder)
+        audio_path = folder_path / paths.get_pronunciation_filename(folder_path)
         with open(audio_path, "wb") as f:
             f.write(response.content)
         print(f"Downloaded audio for '{word}'")

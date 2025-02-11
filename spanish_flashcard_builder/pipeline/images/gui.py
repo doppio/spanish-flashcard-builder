@@ -141,9 +141,13 @@ class ImageSelectorGUI:
         """Run the GUI and return the selected index."""
         try:
             self.root.mainloop()
+        except Exception as e:
+            logging.error(f"Error in GUI: {e}")
+            self.selection = None
         finally:
             try:
-                self.root.destroy()
-            except tkinter.TclError:  # Handle case where window is already destroyed
+                if self.root and self.root.winfo_exists():
+                    self.root.destroy()
+            except tkinter.TclError:
                 pass
         return self.selection

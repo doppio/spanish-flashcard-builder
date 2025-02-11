@@ -1,0 +1,73 @@
+.card {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+}
+
+.term {
+    font-size: 2.5em;
+    font-weight: bold;
+}
+
+.part-of-speech {
+    margin-bottom: 20px;
+}
+
+.definition {
+    font-size: 1.3em;
+    margin: 20px 0;
+    line-height: 1.4;
+}
+
+.example-sentences {
+	text-align: left;
+}
+
+.example-sentences ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.example-sentences h2 {
+	margin-bottom: 0;
+}
+
+.example-sentences li {
+    padding: 16px 0;
+    border-bottom: 1px solid currentColor;
+}
+
+.example-sentences li:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.example-sentences strong {
+    font-size: 0.9em;
+}
+
+.example-sentences em {
+    font-size: 0.8em;
+}
+
+.image img {
+    max-width: 100%;
+    max-height: 200px;
+    object-fit: contain;
+    border-radius: 8px;
+    margin-bottom: 20px
+}
+
+.hint {
+    font-style: italic;
+    margin-top: 10px;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid currentColor;
+    margin: 0px 0;
+} 

@@ -11,7 +11,7 @@ from .vocab_bank import VocabBank
 
 
 def main() -> None:
-    word_list_path = paths.cleaned_vocab
+    word_list_path = paths.sanitized_vocab
     if not word_list_path.exists():
         print(f"File not found: {word_list_path}")
         sys.exit(1)

@@ -22,7 +22,7 @@ images:
 
 openai:
   model: "gpt-4o"
-  temperature: 0.7
+  temperature: 0.8
 
 spacy:
   model_name: "es_core_news_md"

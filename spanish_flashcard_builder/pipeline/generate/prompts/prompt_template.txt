@@ -6,7 +6,7 @@ Return JSON with:
 - definitions: Brief single definition using most common meaning from above
 - frequency_rating: 1-10
 - example_sentences: 1-3 {{es, en}} pairs, ensuring each demonstrates unique usage. Err on the side of fewer if usages are similar.
-- image_search_query: Specific English search query for a memorable flashcard image
+- image_search_query: English search query for flashcard image. Concrete, specific imagery
 - part_of_speech: noun/verb/adjective/etc.
 - gender: "masculine" | "feminine" | "masculine/feminine" | "common" - omit if N/A
 
@@ -19,7 +19,7 @@ Example:
         {{"es": "Mi casa es roja.", "en": "My house is red."}},
         {{"es": "Voy a casa después del trabajo.", "en": "I go home after work."}},
     ],
-    "image_search_query": "colorful house",
+    "image_search_query": "bright red house",
     "part_of_speech": "noun",
     "gender": "feminine"
 }}

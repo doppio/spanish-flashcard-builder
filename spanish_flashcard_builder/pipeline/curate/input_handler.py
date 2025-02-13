@@ -1,34 +1,12 @@
-import os
-import sys
-from typing import Any, List, Type, cast
+from typing import List, Type
+
+from spanish_flashcard_builder.utils import get_key_press
 
 from .commands import Command
 from .models import DictionaryEntry, DictionaryTerm
 from .mw_api import log_mw_data_summary
 from .state import State
 from .vocab_bank import VocabBank
-
-
-def get_key_press() -> str:
-    """Gets single keypress from the user."""
-
-    if os.name == "nt":
-        import msvcrt
-
-        msvcrt_any = cast(Any, msvcrt)  # Cast to Any to handle missing type hints
-        return cast(str, msvcrt_any.getch().decode().lower())
-    else:
-        import termios
-        import tty
-
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(fd)
-            ch = sys.stdin.read(1)
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-        return ch.lower()
 
 
 def format_help_text(commands: List[Type[Command]]) -> str:

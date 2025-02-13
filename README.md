@@ -24,12 +24,12 @@ The tool is designed as a pipeline of steps that can be run in sequence to produ
    pip install .
    ```
 
-3. Set up required API keys in `.env`:
+3. Set up required API keys in `.env` (see [API Setup](#api-setup) for instructions):
    ```
    MERRIAM_WEBSTER_API_KEY=your_key
    OPENAI_API_KEY=your_key
-   GOOGLE_CSE_ID=your_key
    GOOGLE_API_KEY=your_key
+   GOOGLE_SEARCH_ENGINE_ID=your_key
    ```
 
 4. Download required language model:
@@ -137,6 +137,33 @@ openai:
 images:
   max_dimension: 1024
 ```
+## API Setup
+
+To use this tool, you'll need to set up three external APIs:
+
+### Merriam-Webster Dictionary API
+1. Go to https://dictionaryapi.com/
+2. Create a free account
+3. Request an API key for the "Spanish-English Dictionary"
+4. Copy the key to `MERRIAM_WEBSTER_API_KEY` in your `.env`
+
+### OpenAI API
+1. Visit https://platform.openai.com/
+2. Create an account (requires payment method)
+3. Go to API Keys section
+4. Create a new API key
+5. Copy the key to `OPENAI_API_KEY` in your `.env`
+
+### Google Custom Search API
+1. Go to https://console.cloud.google.com/
+2. Create a new project
+3. Enable the Custom Search API
+4. Create API credentials and copy to `GOOGLE_API_KEY` in your `.env`
+5. Go to https://programmablesearchengine.google.com/
+6. Create a new search engine
+7. Under "Search features", enable "Search the entire web"
+8. Enable "Image search"
+9. Copy the Search Engine ID to `GOOGLE_SEARCH_ENGINE_ID` in your `.env`
 
 ## License
 

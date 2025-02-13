@@ -1,12 +1,13 @@
 """Content generation for vocabulary terms."""
 
+import json
 import logging
 from pathlib import Path
+from typing import Any, Dict
 
 from spanish_flashcard_builder.config import paths
-from spanish_flashcard_builder.exceptions import ContentGenerationError
+from spanish_flashcard_builder.exceptions import SpanishFlashcardError
 
-from .data_loader import DictionaryDataLoader
 from .openai_api import OpenAIClient
 from .persistence import ContentPersistence
 from .reviewer import ContentReviewer
@@ -14,12 +15,17 @@ from .reviewer import ContentReviewer
 logger = logging.getLogger(__name__)
 
 
+class ContentGenerationError(SpanishFlashcardError):
+    """Raised when content generation fails."""
+
+    pass
+
+
 class ContentGenerator:
     """Generates AI content for vocabulary terms."""
 
     def __init__(self) -> None:
         self.openai_client = OpenAIClient()
-        self.data_loader = DictionaryDataLoader()
         self.persistence = ContentPersistence()
         self.reviewer = ContentReviewer()
 
@@ -45,12 +51,21 @@ class ContentGenerator:
         """Generate content for a single vocabulary word."""
         print(f"Generating content for '{folder_path.name}'...")
         try:
-            entry = self.data_loader.load_entry(folder_path)
-            if not entry:
-                raise ContentGenerationError("Failed to load dictionary entry")
+            dict_file = folder_path / paths.dictionary_entry_filename
+            with open(dict_file, encoding="utf-8") as f:
+                data: Dict[str, Any] = json.load(f)
+
+            try:
+                word = data["meta"]["id"]
+                part_of_speech = data["fl"]
+                definitions = data["shortdef"]
+            except KeyError as e:
+                raise ContentGenerationError(
+                    f"Missing required field in dictionary data: {e}"
+                ) from e
 
             generated_data = self.openai_client.generate_term(
-                entry.word, entry.part_of_speech, entry.definitions
+                word, part_of_speech, definitions
             )
             term_dict = generated_data.to_dict()
 
@@ -59,6 +74,12 @@ class ContentGenerator:
 
             return self.persistence.save_content(folder_path, term_dict)
 
+        except json.JSONDecodeError as e:
+            raise ContentGenerationError(f"Invalid JSON in dictionary file: {e}") from e
+        except FileNotFoundError as e:
+            raise ContentGenerationError(
+                f"Dictionary file not found: {dict_file}"
+            ) from e
         except Exception as e:
             logger.exception(f"Unexpected error generating content for '{folder_path}'")
             raise ContentGenerationError(str(e)) from e

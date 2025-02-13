@@ -29,3 +29,9 @@ class ValidationError(SpanishFlashcardError):
     """Raised when data validation fails."""
 
     pass
+
+
+class IoError(SpanishFlashcardError):
+    """Raised when an I/O operation fails."""
+
+    pass

@@ -1,132 +1,69 @@
 """OpenAI API client for content generation."""
 
-import logging
-from dataclasses import dataclass
-from typing import Dict, List, Optional
+import json
+from pathlib import Path
+from typing import List
 
 from openai import OpenAI
+from openai.types.chat import ChatCompletion
 
-from spanish_flashcard_builder.config import openai_config
-from spanish_flashcard_builder.exceptions import ContentGenerationError
+from spanish_flashcard_builder.config import api_keys, openai_config
 
-logger = logging.getLogger(__name__)
-
-
-@dataclass
-class GeneratedContent:
-    """Generated content from OpenAI."""
-
-    term: str
-    definitions: str
-    frequency_rating: int
-    example_sentences: List[Dict[str, str]]
-    image_search_query: str
-    part_of_speech: str
-    gender: Optional[str] = None
-
-    def to_dict(self) -> Dict:
-        """Convert to dictionary for serialization."""
-        data = {
-            "term": self.term,
-            "definitions": self.definitions,
-            "frequency_rating": self.frequency_rating,
-            "example_sentences": self.example_sentences,
-            "image_search_query": self.image_search_query,
-            "part_of_speech": self.part_of_speech,
-        }
-        if self.gender:
-            data["gender"] = self.gender
-        return data
+from .models import GeneratedTerm
 
 
 class OpenAIClient:
-    """Client for interacting with OpenAI API."""
-
     def __init__(self) -> None:
-        """Initialize OpenAI client with configuration."""
-        self.client = OpenAI()
-        self.config = openai_config
+        self.client = OpenAI(api_key=api_keys.openai)
+        self.prompt_template = self._load_prompt_file("prompt_template.txt")
+        self.system_instruction = self._load_prompt_file("system_instruction.txt")
+
+    def _load_prompt_file(self, filename: str) -> str:
+        prompt_path = Path(__file__).parent / "prompts" / filename
+        with open(prompt_path, "r") as f:
+            return f.read()
 
     def generate_term(
         self, word: str, part_of_speech: str, definitions: List[str]
-    ) -> GeneratedContent:
-        """Generate enriched content for a vocabulary term.
+    ) -> GeneratedTerm:
+        prompt = self._build_prompt(word, part_of_speech, definitions)
 
-        Args:
-            word: The vocabulary word
-            part_of_speech: Part of speech (noun, verb, etc.)
-            definitions: List of dictionary definitions
+        response: ChatCompletion = self.client.chat.completions.create(
+            model=openai_config.model,
+            temperature=openai_config.temperature,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": self.system_instruction},
+                {"role": "user", "content": prompt},
+            ],
+        )
 
-        Returns:
-            Generated content for the term
+        content = response.choices[0].message.content
+        if content is None:
+            raise ValueError("OpenAI response content is None")
+        print(content)
+        return self._parse_response(content)
 
-        Raises:
-            ContentGenerationError: If content generation fails
-        """
-        try:
-            # Load system prompt template
-            with open("prompts/system_instruction.txt") as f:
-                system_prompt = f.read()
-
-            # Format user prompt
-            user_prompt = self._format_user_prompt(word, part_of_speech, definitions)
-
-            # Make API call
-            response = self.client.chat.completions.create(
-                model=self.config.model,
-                temperature=self.config.temperature,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                stream=False,
-            )
-
-            # Parse response
-            content = response.choices[0].message.content
-            if not content:
-                raise ContentGenerationError("Empty response from OpenAI")
-
-            # Parse content
-            try:
-                data = self._parse_response(content)
-                return GeneratedContent(**data)
-            except Exception as err:
-                raise ContentGenerationError(
-                    f"Failed to parse OpenAI response: {err}"
-                ) from err
-
-        except Exception as err:
-            logger.error(f"OpenAI API error for term '{word}': {err}")
-            raise ContentGenerationError(f"OpenAI API error: {err}") from err
-
-    def _format_user_prompt(
+    def _build_prompt(
         self, word: str, part_of_speech: str, definitions: List[str]
     ) -> str:
-        """Format the user prompt for OpenAI.
+        definitions_text = "\n".join(f"- {d}" for d in definitions)
+        return self.prompt_template.format(
+            word=word, part_of_speech=part_of_speech, definitions=definitions_text
+        )
 
-        This formats the input data into a clear prompt that will generate
-        the desired output format.
-        """
-        definitions_str = "\n".join(f"- {d}" for d in definitions)
-        return f"""Generate Spanish vocabulary content for:
-Word: {word}
-Part of Speech: {part_of_speech}
-Definitions:
-{definitions_str}
+    def _parse_response(self, response_text: str) -> GeneratedTerm:
+        try:
+            data = json.loads(response_text)
 
-Please provide:
-1. A clear, concise definition
-2. 2-3 example sentences with translations
-3. A frequency rating (1-10)
-4. A descriptive image search query
-5. Gender (for nouns only)"""
-
-    def _parse_response(self, content: str) -> Dict:
-        """Parse the OpenAI response into structured data.
-
-        This is a placeholder - in reality, you'd want to implement proper
-        response parsing based on your prompt engineering and expected format.
-        """
-        # TODO: Implement proper response parsing
-        raise NotImplementedError("Response parsing not implemented")
+            return GeneratedTerm(
+                term=data["term"],
+                definitions=data["definitions"],
+                frequency_rating=data["frequency_rating"],
+                example_sentences=data["example_sentences"],
+                image_search_query=data["image_search_query"],
+                part_of_speech=data["part_of_speech"],
+                gender=data.get("gender", None),
+            )
+        except (json.JSONDecodeError, KeyError) as e:
+            raise ValueError(f"Failed to parse OpenAI response: {e}") from e

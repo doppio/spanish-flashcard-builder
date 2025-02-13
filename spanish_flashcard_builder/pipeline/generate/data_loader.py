@@ -22,42 +22,28 @@ class DictionaryEntry:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "DictionaryEntry":
-        """Create instance from dictionary data.
+        """Create instance from Merriam-Webster dictionary data.
 
         Args:
-            data: Dictionary containing entry data
+            data: Dictionary containing Merriam-Webster API response data
 
         Raises:
             ValidationError: If required fields are missing or have invalid types
         """
-        required_fields = {
-            "word": str,
-            "part_of_speech": str,
-            "definitions": list,
-        }
-
-        # Check fields exist
+        required_fields = ["meta", "fl", "shortdef"]
         missing = [k for k in required_fields if k not in data]
         if missing:
             raise ValidationError(
                 f"Missing required fields in dictionary data: {', '.join(missing)}"
             )
 
-        # Validate types
-        invalid = [k for k, t in required_fields.items() if not isinstance(data[k], t)]
-        if invalid:
-            raise ValidationError(
-                f"Invalid types in dictionary data: {', '.join(invalid)}"
-            )
-
-        # Validate definitions are strings
-        if not all(isinstance(d, str) for d in data["definitions"]):
-            raise ValidationError("All definitions must be strings")
+        if "id" not in data["meta"]:
+            raise ValidationError("Missing word id in meta data")
 
         return cls(
-            word=data["word"],
-            part_of_speech=data["part_of_speech"],
-            definitions=data["definitions"],
+            word=data["meta"]["id"],
+            part_of_speech=data["fl"],
+            definitions=data["shortdef"],
         )
 
 

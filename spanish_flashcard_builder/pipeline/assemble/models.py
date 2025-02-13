@@ -1,15 +1,14 @@
 """Models for Anki note generation."""
 
+import os
 from dataclasses import dataclass
-from enum import Enum
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import genanki
+from jinja2 import Environment, FileSystemLoader, Template
 
 from spanish_flashcard_builder.config import anki_config
-
-from .template import load_template, render_template
 
 # Type aliases for clarity
 ExampleSentence = Tuple[str, str]  # (Spanish, English)
@@ -17,24 +16,22 @@ ExampleSentence = Tuple[str, str]  # (Spanish, English)
 # Constants
 SPANISH_MODEL_ID = anki_config.model_id
 
-
-class AnkiFields(str, Enum):
-    """Field names for Anki notes, order defines field order"""
-
-    TERM = "Term"
-    GENDER = "Gender"
-    PART_OF_SPEECH = "PartOfSpeech"
-    DEFINITION = "Definition"
-    EXAMPLE_SENTENCES = "ExampleSentences"
-    IMAGE = "Image"
-    AUDIO = "Audio"
-    FREQUENCY_RATING = "FrequencyRating"
-    GUID = "GUID"  # Hidden field for reimporting
+# Template setup
+env = Environment(
+    loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), "templates"))
+)
 
 
-@dataclass
+def render_template(template_name: str, context: Dict[str, Any]) -> str:
+    """Render a template with given context."""
+    template: Template = env.get_template(template_name)
+    rendered: str = template.render(**context)
+    return rendered
+
+
+@dataclass(frozen=True)
 class AnkiNote:
-    """A Spanish vocabulary note with all required fields."""
+    """A Spanish vocabulary note."""
 
     term: str
     definitions: str
@@ -47,8 +44,22 @@ class AnkiNote:
     guid: str
 
     def to_fields(self) -> List[str]:
-        """Convert note data to ordered fields for Anki."""
-        formatted_sentences = render_template(
+        """Convert to Anki fields."""
+        return [
+            self.term,
+            self.gender or "",
+            self.part_of_speech,
+            self.definitions,
+            self._format_sentences(),
+            f'<img src="{self.image_path.name}">',
+            f"[sound:{self.audio_path.name}]",
+            str(self.frequency_rating),
+            self.guid,
+        ]
+
+    def _format_sentences(self) -> str:
+        """Format example sentences with template."""
+        return render_template(
             "example_sentences.html",
             {
                 "sentences": [
@@ -57,50 +68,37 @@ class AnkiNote:
             },
         )
 
-        field_values = {
-            str(AnkiFields.TERM): self.term,
-            str(AnkiFields.GENDER): self.gender or "",
-            str(AnkiFields.PART_OF_SPEECH): self.part_of_speech,
-            str(AnkiFields.DEFINITION): self.definitions,
-            str(AnkiFields.EXAMPLE_SENTENCES): formatted_sentences,
-            str(AnkiFields.IMAGE): f'<img src="{self.image_path.name}">',
-            str(AnkiFields.AUDIO): f"[sound:{self.audio_path.name}]",
-            str(AnkiFields.FREQUENCY_RATING): str(self.frequency_rating),
-            str(AnkiFields.GUID): self.guid,
-        }
-
-        return [field_values[str(field)] for field in AnkiFields]
-
-    def _validate_fields(self) -> None:
-        """Validate all required fields are present and correctly formatted."""
-        if not self.term:
-            raise ValueError("Term is required")
-        if not self.definitions:
-            raise ValueError("Definitions are required")
-        if not self.part_of_speech:
-            raise ValueError("Part of speech is required")
-        if not self.example_sentences:
-            raise ValueError("Example sentences are required")
-        if not self.image_path:
-            raise ValueError("Image path is required")
-        if not self.audio_path:
-            raise ValueError("Audio path is required")
-
 
 class SpanishVocabModel(genanki.Model):
     """Anki model for Spanish vocabulary cards."""
 
     def __init__(self) -> None:
+        fields = [
+            {"name": "Term"},
+            {"name": "Gender"},
+            {"name": "PartOfSpeech"},
+            {"name": "Definition"},
+            {"name": "ExampleSentences"},
+            {"name": "Image"},
+            {"name": "Audio"},
+            {"name": "FrequencyRating"},
+            {"name": "GUID"},
+        ]
+
+        templates = [
+            {
+                "name": "Spanish -> English",
+                "qfmt": env.get_template("spanish_vocab_front.html").render(),
+                "afmt": env.get_template("spanish_vocab_back.html").render(),
+            }
+        ]
+
+        css = env.get_template("spanish_vocab.css").render()
+
         super().__init__(
             model_id=SPANISH_MODEL_ID,
             name="Spanish Vocabulary",
-            fields=[{"name": field.value} for field in AnkiFields],
-            templates=[
-                {
-                    "name": "Spanish -> English",
-                    "qfmt": load_template("spanish_vocab_front.html"),
-                    "afmt": load_template("spanish_vocab_back.html"),
-                }
-            ],
-            css=load_template("spanish_vocab.css"),
+            fields=fields,
+            templates=templates,
+            css=css,
         )

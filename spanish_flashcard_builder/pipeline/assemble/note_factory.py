@@ -1,14 +1,13 @@
 """Factory for creating Anki notes."""
 
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 import genanki
 
-from spanish_flashcard_builder.exceptions import ValidationError
+from spanish_flashcard_builder.exceptions import MediaProcessingError
 from spanish_flashcard_builder.pipeline.generate.models import GeneratedTerm
 
-from .media import AnkiMediaHandler
 from .models import AnkiNote, SpanishVocabModel
 
 
@@ -17,7 +16,7 @@ class AnkiNoteFactory:
 
     def __init__(self) -> None:
         self.model = SpanishVocabModel()
-        self.media_handler = AnkiMediaHandler()
+        self.media_files: List[str] = []
 
     def create_note(self, term_dir: Path, term: GeneratedTerm) -> genanki.Note:
         """Create an Anki note from a term.
@@ -30,22 +29,13 @@ class AnkiNoteFactory:
             A genanki Note object
 
         Raises:
-            ValidationError: If term data is invalid
             MediaProcessingError: If media files are missing or invalid
         """
-        # Get media paths
-        media = self.media_handler.get_media_paths(term_dir, term)
-        if not media:
-            raise ValidationError(f"Missing media files for term: {term.term}")
+        image_path, audio_path = self._get_media_paths(term_dir)
 
-        image_path, audio_path = media
+        # Convert dict to list of tuples for example sentences
+        example_sentences = [(es, en) for es, en in term.example_sentences.items()]
 
-        # Convert example sentences from dict to tuple format
-        example_sentences = [
-            (sent["es"], sent["en"]) for sent in term.example_sentences
-        ]
-
-        # Create note data structure
         note_data = AnkiNote(
             term=term.term,
             definitions=term.definitions,
@@ -58,18 +48,22 @@ class AnkiNoteFactory:
             guid=term_dir.name,
         )
 
-        # Create actual genanki Note
-        note = genanki.Note(
+        return genanki.Note(
             model=self.model,
             fields=note_data.to_fields(),
             guid=term_dir.name,
-            sort_field=(
-                f"{10000 - note_data.frequency_rating:05d}-{note_data.term.lower()}"
-            ),
+            sort_field=f"{10000 - note_data.frequency_rating:05d}-{term.term.lower()}",
         )
 
-        return note
+    def _get_media_paths(self, term_dir: Path) -> Tuple[Path, Path]:
+        """Get and validate media paths."""
+        image_path = term_dir / "image.png"  # Using hardcoded paths for now
+        audio_path = term_dir / "audio.mp3"  # Using hardcoded paths for now
 
-    def get_media_files(self) -> List[str]:
-        """Get list of media files used in notes."""
-        return self.media_handler.get_tracked_media()
+        if not image_path.exists():
+            raise MediaProcessingError(f"Missing image file: {image_path}")
+        if not audio_path.exists():
+            raise MediaProcessingError(f"Missing audio file: {audio_path}")
+
+        self.media_files.extend([str(image_path), str(audio_path)])
+        return image_path, audio_path

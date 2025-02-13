@@ -1,16 +1,16 @@
-<div class="image">{{Image}}</div>
+<div class="image">{{ Image }}</div>
 
-<div class="term">{{Term}} {{Audio}}</div>
+<div class="term">{{ Term }} {{ Audio }}</div>
 
 <div class="part-of-speech">
-    {{#Gender}}{{Gender}} </span>{{/Gender}}{{PartOfSpeech}}
+    {% if Gender %}{{ Gender }} {% endif %}{{ PartOfSpeech }}
 </div>
 
-<div class="definition">{{Definition}}</div>
+<div class="definition">{{ Definition }}</div>
 
 <hr/>
 
 <div class="example-sentences">
     <h2>Examples</h2>
-    {{ExampleSentences}}
+    {{ ExampleSentences }}
 </div>

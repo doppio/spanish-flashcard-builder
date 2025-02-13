@@ -4,7 +4,7 @@ from typing import Any, List, Type, cast
 
 from .commands import Command
 from .models import DictionaryEntry, DictionaryTerm
-from .mw_api import print_mw_summary
+from .mw_api import log_mw_data_summary
 from .state import State
 from .vocab_bank import VocabBank
 
@@ -46,7 +46,7 @@ def handle_command_input(
 ) -> None:
     """Handles command input loop with specific available commands."""
 
-    print_mw_summary(entry.headword, [entry.raw_data])
+    log_mw_data_summary(entry.headword, [entry.raw_data])
 
     total_entries = len(word.entries)
     if len(word.entries) > 1:

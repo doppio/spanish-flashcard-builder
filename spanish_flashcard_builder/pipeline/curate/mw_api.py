@@ -51,41 +51,42 @@ def look_up(search_word: str) -> Optional[DictionaryTerm]:
     return DictionaryTerm(search_word, dictionary_entries)
 
 
-def extract_audio_url(mw_data: List[Dict]) -> Optional[str]:
+def _extract_audio_url(mw_data: Dict) -> Optional[str]:
     """Extracts the audio URL from Merriam-Webster data."""
 
     if not mw_data:
         return None
-    for entry in mw_data:
-        if isinstance(entry, dict):
-            hwi = entry.get("hwi", {})
-            prs = hwi.get("prs", [])
-            for pr in prs:
-                sound = pr.get("sound", {})
-                audio = sound.get("audio")
-                if audio:
-                    if audio.startswith("bix"):
-                        subdirectory = "bix"
-                    elif audio.startswith("gg"):
-                        subdirectory = "gg"
-                    elif audio[0].isdigit() or audio[0] in string.punctuation:
-                        subdirectory = "number"
-                    else:
-                        subdirectory = audio[0]
-                    return f"https://media.merriam-webster.com/audio/prons/es/me/mp3/{subdirectory}/{audio}.mp3"
+    if isinstance(mw_data, dict):
+        hwi = mw_data.get("hwi", {})
+        prs = hwi.get("prs", [])
+        for pr in prs:
+            sound = pr.get("sound", {})
+            audio = sound.get("audio")
+            if audio:
+                if audio.startswith("bix"):
+                    subdirectory = "bix"
+                elif audio.startswith("gg"):
+                    subdirectory = "gg"
+                elif audio[0].isdigit() or audio[0] in string.punctuation:
+                    subdirectory = "number"
+                else:
+                    subdirectory = audio[0]
+                return f"https://media.merriam-webster.com/audio/prons/es/me/mp3/{subdirectory}/{audio}.mp3"
     return None
 
 
-def download_audio(word: str, word_folder: str, audio_url: str) -> None:
+def download_audio(entry: DictionaryEntry, folder: str) -> None:
     """Downloads pronunciation audio for a word."""
 
+    word = entry.headword
+    audio_url = _extract_audio_url(entry.raw_data)
     if not audio_url:
         print(f"No audio found for {word}.")
         return
     try:
         response = requests.get(audio_url)
         response.raise_for_status()
-        folder_path = Path(word_folder)
+        folder_path = Path(folder)
         audio_path = folder_path / paths.get_pronunciation_filename(folder_path)
         with open(audio_path, "wb") as f:
             f.write(response.content)
@@ -94,7 +95,7 @@ def download_audio(word: str, word_folder: str, audio_url: str) -> None:
         print(f"Error downloading audio for '{word}': {e}")
 
 
-def print_mw_summary(word: str, mw_data: List[Dict]) -> None:
+def log_mw_data_summary(word: str, mw_data: List[Dict]) -> None:
     """Prints a summary of the Merriam-Webster data for a word."""
 
     print("\n--- Merriam-Webster Data ---")

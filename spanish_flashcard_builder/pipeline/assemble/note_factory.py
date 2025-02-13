@@ -5,10 +5,16 @@ from typing import List, Tuple
 
 import genanki
 
-from spanish_flashcard_builder.exceptions import MediaProcessingError
+from spanish_flashcard_builder.exceptions import SpanishFlashcardError
 from spanish_flashcard_builder.pipeline.generate.models import GeneratedTerm
 
 from .models import AnkiNote, SpanishVocabModel
+
+
+class MediaProcessingError(SpanishFlashcardError):
+    """Raised when processing media files fails."""
+
+    pass
 
 
 class AnkiNoteFactory:

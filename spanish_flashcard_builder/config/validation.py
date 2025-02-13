@@ -4,7 +4,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from spanish_flashcard_builder.exceptions import ConfigurationError
+from spanish_flashcard_builder.exceptions import SpanishFlashcardError
+
+
+class ConfigurationError(SpanishFlashcardError):
+    """Raised when configuration is invalid or missing."""
+
+    pass
 
 
 @dataclass

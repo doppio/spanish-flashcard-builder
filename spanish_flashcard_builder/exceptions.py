@@ -7,30 +7,6 @@ class SpanishFlashcardError(Exception):
     pass
 
 
-class ContentGenerationError(SpanishFlashcardError):
-    """Raised when content generation fails."""
-
-    pass
-
-
-class ConfigurationError(SpanishFlashcardError):
-    """Raised when configuration is invalid or missing."""
-
-    pass
-
-
-class MediaProcessingError(SpanishFlashcardError):
-    """Raised when processing media files fails."""
-
-    pass
-
-
-class ValidationError(SpanishFlashcardError):
-    """Raised when data validation fails."""
-
-    pass
-
-
 class IoError(SpanishFlashcardError):
     """Raised when an I/O operation fails."""
 

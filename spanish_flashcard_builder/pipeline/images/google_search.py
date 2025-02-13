@@ -1,14 +1,25 @@
 """Google Custom Search API client for image search."""
 
+import logging
 from dataclasses import dataclass
 from typing import Dict, List, Union
 
 import requests
+from requests.exceptions import RequestException
 
 from spanish_flashcard_builder.config import api_keys
+from spanish_flashcard_builder.exceptions import SpanishFlashcardError
 
 
-@dataclass
+class ImageSearchError(SpanishFlashcardError):
+    """Custom exception for errors during image search."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.message = message
+
+
+@dataclass(frozen=True)
 class ImageResult:
     """Represents a single image search result."""
 
@@ -30,8 +41,7 @@ class GoogleImageSearch:
         self.search_engine_id = api_keys.google_search_engine_id
 
     def search_images(self, query: str, num_results: int = 10) -> List[ImageResult]:
-        """
-        Search for images using the provided query.
+        """Search for images using the provided query.
 
         Args:
             query: Search query string
@@ -39,6 +49,9 @@ class GoogleImageSearch:
 
         Returns:
             List of ImageResult objects
+
+        Raises:
+            ImageSearchError: If the search request fails
         """
         params: Dict[str, Union[str, int]] = {
             "key": self.api_key,
@@ -46,52 +59,49 @@ class GoogleImageSearch:
             "q": query,
             "searchType": "image",
             "num": min(num_results, 10),
-            "rights": (
-                "cc_publicdomain,cc_attribute,cc_sharealike"  # Free to use images
-            ),
+            "rights": "cc_publicdomain,cc_attribute,cc_sharealike",
             "safe": "active",
-            "imgSize": "large",  # Request large images instead of medium
+            "imgSize": "large",
         }
 
         try:
-            response = requests.get(self.BASE_URL, params=params)
+            response = requests.get(self.BASE_URL, params=params, timeout=10)
             response.raise_for_status()
             data = response.json()
 
-            results = []
-            for item in data.get("items", []):
-                image = item.get("image", {})
-                results.append(
-                    ImageResult(
-                        title=item.get("title", ""),
-                        thumbnail_url=item.get("image", {}).get("thumbnailLink", ""),
-                        full_url=item.get("link", ""),
-                        width=image.get("width", 0),
-                        height=image.get("height", 0),
-                        file_format=image.get("mime", "").split("/")[-1],
-                    )
+            return [
+                ImageResult(
+                    title=item.get("title", ""),
+                    thumbnail_url=item.get("image", {}).get("thumbnailLink", ""),
+                    full_url=item.get("link", ""),
+                    width=item.get("image", {}).get("width", 0),
+                    height=item.get("image", {}).get("height", 0),
+                    file_format=item.get("image", {}).get("mime", "").split("/")[-1],
                 )
+                for item in data.get("items", [])
+            ]
 
-            return results
+        except RequestException as e:
+            logging.error(f"Failed to search for images: {e}")
+            raise ImageSearchError(f"Image search failed: {e}") from e
 
-        except requests.RequestException as e:
-            print(f"Error searching for images: {e}")
-            return []
-
-    def download_image(self, url: str) -> bytes | None:
+    def download_image(self, url: str) -> bytes:
         """Download an image from a URL.
 
         Args:
             url: The URL of the image to download.
 
         Returns:
-            The image bytes if successful, None otherwise.
+            The image bytes
+
+        Raises:
+            ImageSearchError: If the download fails
         """
         try:
-            response = requests.get(url, stream=True)
+            response = requests.get(url, stream=True, timeout=10)
             response.raise_for_status()
-            content: bytes = response.content
-            return content
-        except requests.RequestException as e:
-            print(f"Error downloading image: {e}")
-            return None
+            return response.content
+
+        except RequestException as e:
+            logging.error(f"Failed to download image from {url}: {e}")
+            raise ImageSearchError(f"Image download failed: {e}") from e

@@ -5,12 +5,14 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+import requests
 from PIL import Image
 
 from spanish_flashcard_builder.config import image_config, paths
 
 from .google_search import GoogleImageSearch, ImageResult
 from .gui import ImageSelectorGUI
+from .image_processor import ImageProcessor
 
 
 class ImageSelector:
@@ -89,18 +91,32 @@ class ImageSelector:
 
         return pending_dirs
 
+    def _fetch_image(self, url: str) -> Optional[bytes]:
+        try:
+            response = requests.get(url, timeout=(1.5, 3))
+            response.raise_for_status()
+            return response.content
+        except Exception as e:
+            logging.error(f"Failed to fetch image from {url}: {e}")
+            return None
+
     def _search_images_for_term(
         self, term_dir: Path, term_data: Dict[str, Any]
     ) -> Optional[List[ImageResult]]:
         """Search for images based on the term data."""
         logging.info(f"Searching for images matching term '{term_dir.name}'")
-        image_results = self.search.search_images(term_data["image_search_query"])
+        results = self.search.search_images(term_data["image_search_query"])
 
-        if not image_results:
+        if not results:
             logging.warning(f"No images found for term {term_dir.name}")
             return None
 
-        return image_results
+        images = {}
+        for i, result in enumerate(results[:10]):
+            if img_bytes := self._fetch_image(result.full_url):
+                images[i] = img_bytes
+
+        return results if images else None
 
     def _handle_selection_result(
         self,
@@ -159,17 +175,26 @@ class ImageSelector:
         if selection_index is None or selection_index == -1:
             return selection_index, None
 
-        return selection_index, gui.full_images.get(selection_index)
+        selected_image = (
+            gui.full_images.get(selection_index)
+            if isinstance(selection_index, int)
+            else None
+        )
+        return selection_index, selected_image
 
     def process_terms(self) -> None:
         """Process all vocabulary terms that need images."""
-        try:
-            pending_terms = self._get_pending_term_dirs()
+        processor = ImageProcessor(image_config.max_dimension)
 
-            for term_dir in pending_terms:
-                if not self._process_single_term(term_dir):
-                    break
-
-        except Exception as e:
-            logging.error(f"Unexpected error during term processing: {e}")
-            raise
+        for term_dir in self._get_pending_term_dirs():
+            if term_data := self._load_augmented_term(term_dir):
+                if results := self._search_images_for_term(term_dir, term_data):
+                    gui = ImageSelectorGUI(results, term_data)
+                    idx = gui.run()
+                    if idx is not None and idx != -1 and isinstance(idx, int):
+                        if image := gui.full_images.get(idx):
+                            processor.process_and_save(
+                                image, term_dir / paths.get_image_filename(term_dir)
+                            )
+                    if idx is None:  # User quit
+                        break

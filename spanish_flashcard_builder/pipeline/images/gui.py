@@ -69,9 +69,15 @@ class ScrollableFrame:
 class TermInfoPanel:
     """Panel displaying term information including definition and example sentences."""
 
-    def __init__(self, parent: ttk.Frame, term_data: Dict[str, Any]) -> None:
+    def __init__(
+        self,
+        parent: ttk.Frame,
+        term_data: Dict[str, Any],
+        on_search: Callable[[str], None],
+    ) -> None:
         self.frame: ttk.Frame = ttk.Frame(parent, padding="10")
         self.term_data: Dict[str, Any] = term_data
+        self.on_search: Callable[[str], None] = on_search
         self._create_widgets()
 
     def _create_widgets(self) -> None:
@@ -87,11 +93,12 @@ class TermInfoPanel:
             font=SUBTITLE_FONT,
         ).pack(anchor="w")
 
-        ttk.Label(
+        self.query_panel = QueryPanel(
             self.frame,
-            text=f"Search Query: {self.term_data.get('image_search_query', '')}",
-            font=BODY_FONT,
-        ).pack(anchor="w")
+            initial_query=self.term_data["image_search_query"],
+            on_search=self.on_search,
+        )
+        self.query_panel.pack(anchor="w", pady=10)
 
         if "example_sentences" in self.term_data:
             self._add_example_sentences()
@@ -112,6 +119,45 @@ class TermInfoPanel:
 
     def grid(self, **kwargs: Any) -> None:
         self.frame.grid(**kwargs)
+
+
+class QueryPanel:
+    """Panel for entering and submitting a search query."""
+
+    def __init__(
+        self,
+        parent: ttk.Frame,
+        initial_query: str,
+        on_search: Callable[[str], None],
+    ) -> None:
+        self.frame: ttk.Frame = ttk.Frame(parent)
+        self.query_var = tk.StringVar(value=initial_query)
+        self.on_search = on_search
+        self._create_widgets()
+
+    def _create_widgets(self) -> None:
+        query_label = ttk.Label(self.frame, text="Search Query:", font=BODY_FONT)
+        query_label.pack(side=tk.LEFT, padx=5)
+
+        self.query_entry = ttk.Entry(
+            self.frame, textvariable=self.query_var, font=BODY_FONT
+        )
+        self.query_entry.pack(side=tk.LEFT, padx=5)
+        self.query_entry.bind("<Return>", self._handle_input)
+
+        search_button = ttk.Button(
+            self.frame, text="Search", command=self._handle_input
+        )
+        search_button.pack(side=tk.LEFT, padx=5)
+
+    def _handle_input(self, event: Optional[tk.Event] = None) -> None:
+        self.on_search(self.query_var.get())
+
+    def pack(self, **kwargs: Any) -> None:
+        self.frame.pack(**kwargs)
+
+    def get_query(self) -> str:
+        return self.query_var.get()
 
 
 class ImageGrid:
@@ -180,6 +226,12 @@ class ImageSelectorGUI:
 
         # Add keyboard shortcuts
         self.root.bind("<Key>", self._handle_key)
+        self.root.bind("<Button-1>", self._focus_on_click)
+
+    def _focus_on_click(self, event: tk.Event) -> None:
+        """Set focus to the root window when clicking outside of the input field."""
+        if event.widget != self.term_info.query_panel.query_entry:
+            self.root.focus_set()
 
     def _create_layout(self) -> None:
         """Create and arrange the GUI components."""
@@ -191,7 +243,9 @@ class ImageSelectorGUI:
         self.scroll_container.pack()
 
         # Add term information
-        self.term_info = TermInfoPanel(self.scroll_container.frame, self.term_data)
+        self.term_info = TermInfoPanel(
+            self.scroll_container.frame, self.term_data, self._run_new_search
+        )
         self.term_info.grid(
             row=0, column=0, columnspan=GRID_COLUMNS, sticky="ew", padx=15, pady=(0, 15)
         )
@@ -219,7 +273,7 @@ class ImageSelectorGUI:
 
     def _show_processing_message(self, index: int) -> None:
         """Show the processing message after selection."""
-        term = self.term_data.get("display_form", "term")
+        term = self.term_data["term"]
 
         # Clear existing content
         for widget in self.root.winfo_children():
@@ -250,6 +304,9 @@ class ImageSelectorGUI:
 
     def _handle_key(self, event: tk.Event) -> None:
         """Handle keyboard input."""
+        if self.root.focus_get() != self.root:
+            return  # Ignore key events if the focus is not on the root window
+
         if event.char == "q":
             logging.info(QUIT_MSG)
             self.selection = None
@@ -259,9 +316,14 @@ class ImageSelectorGUI:
             self.selection = -1
             self.root.quit()
         elif event.char in "0123456789":
-            selection = 0 if event.char == "0" else int(event.char)
+            selection = 10 if event.char == "0" else int(event.char)
             if 1 <= selection <= len(self.results):
                 self._handle_selection(selection - 1)
+
+    def _run_new_search(self, new_query: str) -> None:
+        print(f"Running new search with query: {new_query}")
+        # Implement the logic to perform a new search with the new_query
+        # This might involve calling a method from google_search or similar
 
     def run(self) -> Optional[int]:
         """Run the GUI and return the selected index."""

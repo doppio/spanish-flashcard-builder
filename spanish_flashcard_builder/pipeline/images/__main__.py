@@ -1,4 +1,8 @@
+import logging
+
 from .selector import ImageSelector
+
+logging.basicConfig(level=logging.INFO)
 
 
 def main() -> None:

@@ -1,20 +1,16 @@
 """GUI component for image selection."""
 
-import logging
-import tkinter
 import tkinter as tk
-from io import BytesIO
 from tkinter import ttk
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
-import requests
 from PIL import Image, ImageTk
-
-from .google_search import GoogleImageSearch, ImageResult, ImageSearchError
 
 # Type aliases
 FontConfig = Union[Tuple[str, int], Tuple[str, int, str]]
 ImageSize = Tuple[int, int]
+OnSearchCallback = Callable[[str], None]
+OnSelectCallback = Callable[[int], None]
 
 # UI Constants
 PREVIEW_SIZE: ImageSize = (300, 300)
@@ -73,11 +69,11 @@ class TermInfoPanel:
         self,
         parent: ttk.Frame,
         term_data: Dict[str, Any],
-        on_search: Callable[[str], None],
+        on_search: OnSearchCallback,
     ) -> None:
         self.frame: ttk.Frame = ttk.Frame(parent, padding="10")
         self.term_data: Dict[str, Any] = term_data
-        self.on_search: Callable[[str], None] = on_search
+        self.on_search: OnSearchCallback = on_search
         self._create_widgets()
 
     def _create_widgets(self) -> None:
@@ -128,7 +124,7 @@ class QueryPanel:
         self,
         parent: ttk.Frame,
         initial_query: str,
-        on_search: Callable[[str], None],
+        on_search: OnSearchCallback,
     ) -> None:
         self.frame: ttk.Frame = ttk.Frame(parent)
         self.query_var = tk.StringVar(value=initial_query)
@@ -163,9 +159,9 @@ class QueryPanel:
 class ImageGrid:
     """Grid display of selectable images with keyboard shortcuts (1-9, 0)."""
 
-    def __init__(self, parent: ttk.Frame, on_select: Callable[[int], None]) -> None:
+    def __init__(self, parent: ttk.Frame, on_select: OnSelectCallback) -> None:
         self.frame: ttk.Frame = ttk.Frame(parent)
-        self.on_select: Callable[[int], None] = on_select
+        self.on_select: OnSelectCallback = on_select
         self.image_refs: List[ImageTk.PhotoImage] = []  # Prevent garbage collection
 
     def display_images(self, loaded_images: List[tuple[int, Image.Image]]) -> None:
@@ -188,7 +184,8 @@ class ImageGrid:
             img_label.pack()
 
             def click_handler(e: tk.Event, idx: int = image_idx) -> None:
-                return self.on_select(idx)
+                self.on_select(idx)
+                e.widget.winfo_toplevel().quit()
 
             for widget in (frame, number_label, img_label):
                 widget.bind("<Button-1>", click_handler)
@@ -200,22 +197,40 @@ class ImageGrid:
 class ImageSelectorGUI:
     """GUI window for selecting images."""
 
-    def __init__(self, results: List[ImageResult], term_data: Dict[str, Any]) -> None:
-        """Initialize the GUI with search results and term data."""
-        self.results = results
-        self.term_data = term_data
-        self.selection: Optional[int] = None
-        self.full_images: Dict[int, Image.Image] = {}
+    def __init__(
+        self,
+        on_search: OnSearchCallback,
+        on_select: OnSelectCallback,
+        on_skip: Callable[[], None],
+        on_quit: Callable[[], None],
+    ) -> None:
+        """Initialize the GUI with callbacks.
+
+        Args:
+            on_search: Callback when user requests a new search
+            on_select: Callback when user selects an image
+            on_skip: Callback when user skips (presses 'n')
+            on_quit: Callback when user quits (presses 'q')
+        """
+        self.on_search = on_search
+        self.on_select = on_select
+        self.on_skip = on_skip
+        self.on_quit = on_quit
 
         # Create and configure the main window
         self.root = tk.Tk()
         self._setup_window()
         self._create_layout()
-        self._load_and_display_images()
+
+        # Initialize state
+        self.term_data: Optional[Dict[str, Any]] = None
+        self.images: List[Image.Image] = []
+        self.image_refs: List[ImageTk.PhotoImage] = []
 
     def _setup_window(self) -> None:
         """Configure the main window properties."""
         self.root.title("Flashcard Image Selector")
+        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
         # Calculate window dimensions
         window_width = PADDING * 2 + GRID_COLUMNS * (PREVIEW_SIZE[0] + PADDING * 2)
@@ -228,11 +243,6 @@ class ImageSelectorGUI:
         self.root.bind("<Key>", self._handle_key)
         self.root.bind("<Button-1>", self._focus_on_click)
 
-    def _focus_on_click(self, event: tk.Event) -> None:
-        """Set focus to the root window when clicking outside of the input field."""
-        if event.widget != self.term_info.query_panel.query_entry:
-            self.root.focus_set()
-
     def _create_layout(self) -> None:
         """Create and arrange the GUI components."""
         # Add instructions
@@ -242,127 +252,93 @@ class ImageSelectorGUI:
         self.scroll_container = ScrollableFrame(cast(tk.Widget, self.root))
         self.scroll_container.pack()
 
-        # Add term information
-        self.term_info = TermInfoPanel(
-            self.scroll_container.frame, self.term_data, self._run_new_search
-        )
-        self.term_info.grid(
+        # Create empty frames for dynamic content
+        self.term_frame = ttk.Frame(self.scroll_container.frame)
+        self.term_frame.grid(
             row=0, column=0, columnspan=GRID_COLUMNS, sticky="ew", padx=15, pady=(0, 15)
         )
 
-        # Add image grid
-        self.image_grid = ImageGrid(self.scroll_container.frame, self._handle_selection)
-        self.image_grid.grid(row=1, column=0, columnspan=GRID_COLUMNS)
+        self.grid_frame = ttk.Frame(self.scroll_container.frame)
+        self.grid_frame.grid(row=1, column=0, columnspan=GRID_COLUMNS)
 
-    def _load_and_display_images(self) -> None:
-        """Load and display the images."""
-        loaded_images: List[Tuple[int, Image.Image]] = []
-        for idx, result in enumerate(self.results):
-            try:
-                response = requests.get(result.full_url, stream=True, timeout=10)
-                response.raise_for_status()
-                img = Image.open(BytesIO(response.content))
-                self.full_images[idx] = img
-                loaded_images.append((idx, img))
-            except Exception as e:
-                logging.error(f"Failed to load image {idx}: {e}")
+    def update_term(self, term_data: Dict[str, Any]) -> None:
+        """Update the term information displayed."""
+        self.term_data = term_data
 
-        # Sort images by index and display in main thread
-        loaded_images.sort(key=lambda x: x[0])
-        self.image_grid.display_images(loaded_images)
-
-    def _show_processing_message(self, index: int) -> None:
-        """Show the processing message after selection."""
-        term = self.term_data["term"]
-
-        # Clear existing content
-        for widget in self.root.winfo_children():
+        # Clear existing widgets
+        for widget in self.term_frame.winfo_children():
             widget.destroy()
 
-        # Show processing message
-        container = ttk.Frame(self.root)
-        container.pack(expand=True, fill="both")
-        container.grid_rowconfigure(0, weight=1)
-        container.grid_columnconfigure(0, weight=1)
+        # Create new term info panel
+        self.term_info = TermInfoPanel(self.term_frame, term_data, self.on_search)
+        self.term_info.grid(sticky="ew")
 
-        ttk.Label(
-            container,
-            text=PROCESSING_MSG.format(index + 1, term),
-            font=BODY_FONT,
-            padding=20,
-        ).grid(row=0, column=0)
+    def update_images(self, new_images: List[Image.Image]) -> None:
+        """Update the displayed images."""
+        self.images = new_images
+        self.image_refs.clear()
 
-        self.root.update()
-        logging.info(f"Selected image {index + 1} for '{term}', processing...")
+        # Clear existing grid
+        for widget in self.grid_frame.winfo_children():
+            widget.destroy()
 
-    def _handle_selection(self, index: int) -> None:
-        """Handle image selection."""
-        if 0 <= index < len(self.results) and index in self.full_images:
-            self.selection = index
-            self._show_processing_message(index)
-            self.root.quit()
+        # Create new image grid
+        self.image_grid = ImageGrid(self.grid_frame, self.on_select)
+        self.image_grid.grid()
+        self._display_images()
+
+    def _display_images(self) -> None:
+        """Display the current images in the grid."""
+        loaded_images = [(i, img) for i, img in enumerate(self.images)]
+        self.image_grid.display_images(loaded_images)
+        self.image_refs.extend(self.image_grid.image_refs)
+
+    def _focus_on_click(self, event: tk.Event) -> None:
+        """Set focus to the root window when clicking outside of the input field."""
+        if (
+            hasattr(self, "term_info")
+            and event.widget != self.term_info.query_panel.query_entry
+        ):
+            self.root.focus_set()
 
     def _handle_key(self, event: tk.Event) -> None:
-        """Handle keyboard input."""
-        if self.root.focus_get() != self.root:
-            return  # Ignore key events if the focus is not on the root window
+        """Handle keyboard shortcuts."""
+        # Ignore keyboard shortcuts when focused on search entry
+        if (
+            hasattr(self, "term_info")
+            and event.widget == self.term_info.query_panel.query_entry
+        ):
+            return
 
-        if event.char == "q":
-            logging.info(QUIT_MSG)
-            self.selection = None
+        key = event.char.lower()
+
+        if key == "n":
+            self.on_skip()
             self.root.quit()
-        elif event.char == "n":
-            logging.info(NO_IMAGES_MSG)
-            self.selection = -1
+        elif key == "q":
+            self.on_quit()
             self.root.quit()
-        elif event.char in "0123456789":
-            selection = 10 if event.char == "0" else int(event.char)
-            if 1 <= selection <= len(self.results):
-                self._handle_selection(selection - 1)
+        elif key in "123456789":
+            idx = int(key) - 1
+            if idx < len(self.images):
+                self.on_select(idx)
+                self.root.quit()
+        elif key == "0":  # Handle 0 as the 10th image
+            if 9 < len(self.images):
+                self.on_select(9)
+                self.root.quit()
 
-    def _run_new_search(self, new_query: str) -> None:
-        print(f"Running new search with query: {new_query}")
-        try:
-            search_client = GoogleImageSearch()
-            results = search_client.search_images(new_query)
-            print(f"Found {len(results)} images.")
+    def _on_close(self) -> None:
+        """Handle window close button."""
+        self.on_quit()
+        self.root.quit()
 
-            # Clear current images
-            self.image_grid.frame.destroy()
-            self.image_grid = ImageGrid(
-                self.scroll_container.frame, self._handle_selection
-            )
-            self.image_grid.grid(row=1, column=0, columnspan=GRID_COLUMNS)
+    def run(self) -> None:
+        """Start the GUI event loop."""
+        self.root.mainloop()
 
-            # Load and display new images
-            loaded_images: List[Tuple[int, Image.Image]] = []
-            for idx, result in enumerate(results):
-                try:
-                    response = requests.get(result.full_url, stream=True, timeout=10)
-                    response.raise_for_status()
-                    img = Image.open(BytesIO(response.content))
-                    self.full_images[idx] = img
-                    loaded_images.append((idx, img))
-                except Exception as e:
-                    logging.error(f"Failed to load image {idx}: {e}")
-
-            loaded_images.sort(key=lambda x: x[0])
-            self.image_grid.display_images(loaded_images)
-
-        except ImageSearchError as e:
-            print(f"Error during image search: {e}")
-
-    def run(self) -> Optional[int]:
-        """Run the GUI and return the selected index."""
-        try:
-            self.root.mainloop()
-        except Exception as e:
-            logging.error(f"Error in GUI: {e}")
-            self.selection = None
-        finally:
-            try:
-                if self.root and self.root.winfo_exists():
-                    self.root.destroy()
-            except tkinter.TclError:
-                pass
-        return self.selection
+    def destroy(self) -> None:
+        """Clean up resources and destroy the window."""
+        if hasattr(self, "root"):
+            self.root.destroy()
+            delattr(self, "root")

@@ -10,7 +10,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 import requests
 from PIL import Image, ImageTk
 
-from .google_search import ImageResult
+from .google_search import GoogleImageSearch, ImageResult, ImageSearchError
 
 # Type aliases
 FontConfig = Union[Tuple[str, int], Tuple[str, int, str]]
@@ -322,8 +322,35 @@ class ImageSelectorGUI:
 
     def _run_new_search(self, new_query: str) -> None:
         print(f"Running new search with query: {new_query}")
-        # Implement the logic to perform a new search with the new_query
-        # This might involve calling a method from google_search or similar
+        try:
+            search_client = GoogleImageSearch()
+            results = search_client.search_images(new_query)
+            print(f"Found {len(results)} images.")
+
+            # Clear current images
+            self.image_grid.frame.destroy()
+            self.image_grid = ImageGrid(
+                self.scroll_container.frame, self._handle_selection
+            )
+            self.image_grid.grid(row=1, column=0, columnspan=GRID_COLUMNS)
+
+            # Load and display new images
+            loaded_images: List[Tuple[int, Image.Image]] = []
+            for idx, result in enumerate(results):
+                try:
+                    response = requests.get(result.full_url, stream=True, timeout=10)
+                    response.raise_for_status()
+                    img = Image.open(BytesIO(response.content))
+                    self.full_images[idx] = img
+                    loaded_images.append((idx, img))
+                except Exception as e:
+                    logging.error(f"Failed to load image {idx}: {e}")
+
+            loaded_images.sort(key=lambda x: x[0])
+            self.image_grid.display_images(loaded_images)
+
+        except ImageSearchError as e:
+            print(f"Error during image search: {e}")
 
     def run(self) -> Optional[int]:
         """Run the GUI and return the selected index."""

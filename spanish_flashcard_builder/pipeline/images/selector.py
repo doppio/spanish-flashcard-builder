@@ -1,10 +1,11 @@
 """Interactive image selector for Spanish vocabulary terms."""
 
+import concurrent.futures
 import json
 import logging
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import requests
 from PIL import Image
@@ -26,11 +27,14 @@ class ImageSelector:
     def __init__(self) -> None:
         """Initialize with term data."""
         self.search_client = GoogleImageSearch()
-        self.current_images: List[Image.Image] = []
         self.current_results: List[ImageResult] = []
         self.selected_index: Optional[int] = None
         self.gui: Optional[ImageSelectorGUI] = None
         self.terms_dir = paths.terms_dir
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
+        self.loading_futures: List[
+            concurrent.futures.Future[Optional[Image.Image]]
+        ] = []
 
     def _load_augmented_term(self, term_dir: Path) -> Optional[Dict[str, Any]]:
         """Load the augmented term data from a term directory."""
@@ -54,28 +58,6 @@ class ImageSelector:
                 f"Unexpected error loading augmented term from {term_dir}: {e}"
             )
             return None
-
-    def _save_image(self, image: Image.Image, term_dir: Path) -> bool:
-        """Save and resize image for Anki flashcards."""
-        try:
-            processed_image = image.copy()
-            original_dimensions = processed_image.size
-            max_dimension = image_config.max_dimension
-            processed_image.thumbnail(
-                (max_dimension, max_dimension), Image.Resampling.LANCZOS
-            )
-            logging.info(
-                f"Resized image from {original_dimensions} to {processed_image.size}"
-            )
-
-            output_path = term_dir / paths.get_image_filename(term_dir)
-            processed_image.save(output_path, "PNG")
-            logging.info(f"Successfully saved image to {output_path}")
-            return True
-
-        except Exception as e:
-            logging.error(f"Failed to save image to {term_dir}: {e}")
-            return False
 
     def _get_pending_term_dirs(self) -> List[Path]:
         """Get directories of vocabulary terms that still need images."""
@@ -106,6 +88,57 @@ class ImageSelector:
             logging.error(f"Failed to fetch image from {url}: {e}")
             return None
 
+    def _load_image_async(
+        self, result: ImageResult
+    ) -> concurrent.futures.Future[Optional[Image.Image]]:
+        """Start async loading of an image."""
+        return self.executor.submit(self._load_image, result)
+
+    def _load_image(self, result: ImageResult) -> Optional[Image.Image]:
+        """Load a single image."""
+        try:
+            response = requests.get(result.full_url, stream=True, timeout=10)
+            response.raise_for_status()
+            return Image.open(BytesIO(response.content))
+        except Exception as e:
+            logging.error(f"Failed to load image from {result.full_url}: {e}")
+            return None
+
+    def _handle_search(self, query: str) -> None:
+        """Handle new search request."""
+        logging.info(f"Searching for '{query}'...")
+
+        try:
+            self.current_results = self.search_client.search_images(query)
+
+            # Start async loading and update GUI
+            self.loading_futures = [
+                self._load_image_async(result)
+                for result in self.current_results[:10]  # Limit to first 10 images
+            ]
+            if self.gui:
+                self.gui.update_image_futures(self.loading_futures)
+
+        except ImageSearchError as e:
+            logging.error(f"Error during image search: {e}")
+            self.current_results = []
+
+    def _handle_select(self, index: int, image: Optional[Image.Image]) -> None:
+        """Handle select action."""
+        self.selected_index = index
+        self.selected_image = image
+        logging.info("Selected image")
+
+    def _handle_skip(self) -> None:
+        """Handle skip action."""
+        self.selected_index = -1
+        logging.info("Skipped image selection")
+
+    def _handle_quit(self) -> None:
+        """Handle quit action."""
+        self.selected_index = None
+        logging.info("Quit image selection")
+
     def _search_images_for_term(
         self, term_dir: Path, term_data: Dict[str, Any]
     ) -> Optional[List[ImageResult]]:
@@ -123,112 +156,6 @@ class ImageSelector:
                 images[i] = img_bytes
 
         return results if images else None
-
-    def _handle_selection_result(
-        self,
-        term_dir: Path,
-        selection_index: Optional[int],
-        selected_image: Optional[Image.Image],
-    ) -> bool:
-        """Process the user's image selection result.
-
-        Returns:
-            True to continue to next term, False to stop completely
-        """
-        if selection_index is None:
-            logging.info("User quit the image selection process")
-            return False
-        elif selection_index == -1:
-            logging.info(f"No suitable image found for term {term_dir.name}")
-            return True
-
-        if selected_image and self._save_image(selected_image, term_dir):
-            logging.info(f"Successfully processed image for term {term_dir.name}")
-        else:
-            logging.error(f"Failed to process image for term {term_dir.name}")
-
-        return True
-
-    def _process_single_term(self, term_dir: Path) -> bool:
-        """Process a single term to select and save an appropriate image."""
-        term_data = self._load_augmented_term(term_dir)
-        if not term_data:
-            return True
-
-        image_results = self._search_images_for_term(term_dir, term_data)
-        if not image_results:
-            return True
-
-        logging.info(f"Displaying image options for term '{term_dir.name}'...")
-        selection_index, selected_image = self._handle_image_selection()
-        return self._handle_selection_result(term_dir, selection_index, selected_image)
-
-    def _handle_image_selection(self) -> Tuple[Optional[int], Optional[Image.Image]]:
-        """Display image options and handle user selection.
-
-        Returns:
-            Tuple of (selection index, selected image)
-            selection index: None=quit, -1=no suitable image
-        """
-        gui = ImageSelectorGUI(
-            on_search=self._handle_search,
-            on_select=self._handle_select,
-            on_skip=self._handle_skip,
-            on_quit=self._handle_quit,
-        )
-        gui.run()
-
-        if self.selected_index is None or self.selected_index == -1:
-            return self.selected_index, None
-
-        selected_image = (
-            self.current_images[self.selected_index]
-            if isinstance(self.selected_index, int)
-            else None
-        )
-        return self.selected_index, selected_image
-
-    def _handle_search(self, query: str) -> None:
-        """Handle new search request."""
-        logging.info(f"Searching for '{query}'...")
-
-        try:
-            self.current_results = self.search_client.search_images(query)
-            self.current_images = self._load_images(self.current_results)
-            logging.info(f"Found {len(self.current_images)} images for query: {query}")
-        except ImageSearchError as e:
-            logging.error(f"Error during image search: {e}")
-            self.current_images = []
-            self.current_results = []
-
-    def _handle_select(self, index: int) -> None:
-        """Handle image selection."""
-        if 0 <= index < len(self.current_results):
-            self.selected_index = index
-            logging.info(f"Selected image {index + 1}")
-
-    def _handle_skip(self) -> None:
-        """Handle skip action."""
-        self.selected_index = -1
-        logging.info("Skipped image selection")
-
-    def _handle_quit(self) -> None:
-        """Handle quit action."""
-        self.selected_index = None
-        logging.info("Quit image selection")
-
-    def _load_images(self, results: List[ImageResult]) -> List[Image.Image]:
-        """Load images from search results."""
-        loaded_images: List[Image.Image] = []
-        for result in results:
-            try:
-                response = requests.get(result.full_url, stream=True, timeout=10)
-                response.raise_for_status()
-                img = Image.open(BytesIO(response.content))
-                loaded_images.append(img)
-            except Exception as e:
-                logging.error(f"Failed to load image: {e}")
-        return loaded_images
 
     def process_terms(self) -> None:
         """Process all vocabulary terms that need images."""
@@ -252,12 +179,11 @@ class ImageSelector:
                 if term_data := self._load_augmented_term(term_dir):
                     # Initial search and update GUI
                     self._handle_search(term_data["image_search_query"])
-                    if not self.current_images:
+                    if not self.current_results:
                         continue
 
-                    if self.gui:  # Type guard for mypy
+                    if self.gui:
                         self.gui.update_term(term_data)
-                        self.gui.update_images(self.current_images)
                         self.gui.run()
 
                     # Handle selection result
@@ -266,11 +192,13 @@ class ImageSelector:
                     if self.selected_index == -1:  # Skip
                         continue
                     # Valid selection
-                    if image := self.current_images[self.selected_index]:
+                    if self.selected_image:
                         processor.process_and_save(
-                            image, term_dir / paths.get_image_filename(term_dir)
+                            self.selected_image,
+                            term_dir / paths.get_image_filename(term_dir),
                         )
         finally:
             if self.gui:
                 self.gui.destroy()
                 self.gui = None
+            self.executor.shutdown(wait=False)

@@ -1,5 +1,7 @@
 """GUI component for image selection."""
 
+import concurrent.futures
+import logging
 import tkinter as tk
 from tkinter import ttk
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
@@ -10,7 +12,7 @@ from PIL import Image, ImageTk
 FontConfig = Union[Tuple[str, int], Tuple[str, int, str]]
 ImageSize = Tuple[int, int]
 OnSearchCallback = Callable[[str], None]
-OnSelectCallback = Callable[[int], None]
+OnSelectCallback = Callable[[int, Optional[Image.Image]], None]
 
 # UI Constants
 PREVIEW_SIZE: ImageSize = (300, 300)
@@ -79,7 +81,7 @@ class TermInfoPanel:
     def _create_widgets(self) -> None:
         ttk.Label(
             self.frame,
-            text=f"Term: {self.term_data.get('display_form', '')}",
+            text=f"Term: {self.term_data['term']}",
             font=TITLE_FONT,
         ).pack(anchor="w")
 
@@ -163,32 +165,91 @@ class ImageGrid:
         self.frame: ttk.Frame = ttk.Frame(parent)
         self.on_select: OnSelectCallback = on_select
         self.image_refs: List[ImageTk.PhotoImage] = []  # Prevent garbage collection
+        self.loading_labels: Dict[int, ttk.Label] = {}  # Track loading indicators
+        self.image_labels: Dict[int, ttk.Label] = {}  # Track image labels
+        self.futures: List[concurrent.futures.Future[Optional[Image.Image]]] = []
 
-    def display_images(self, loaded_images: List[tuple[int, Image.Image]]) -> None:
-        for grid_idx, (image_idx, image) in enumerate(loaded_images):
+    def display_futures(
+        self, futures: List[concurrent.futures.Future[Optional[Image.Image]]]
+    ) -> None:
+        """Display loading states and set up future callbacks."""
+        self.futures = futures
+        self.image_refs.clear()
+
+        # Clear existing grid
+        for widget in self.frame.winfo_children():
+            widget.destroy()
+        self.loading_labels.clear()
+        self.image_labels.clear()
+
+        # Create grid slots for each future
+        for idx, future in enumerate(futures):
             frame = ttk.Frame(self.frame)
-            row = (grid_idx // GRID_COLUMNS) + 1
-            col = grid_idx % GRID_COLUMNS
+            row = (idx // GRID_COLUMNS) + 1
+            col = idx % GRID_COLUMNS
             frame.grid(row=row, column=col, padx=10, pady=10)
 
-            display_number = "0" if image_idx == 9 else str(image_idx + 1)
+            # Add number label
+            display_number = "0" if idx == 9 else str(idx + 1)
             number_label = ttk.Label(frame, text=display_number, font=BODY_FONT)
             number_label.pack()
 
-            preview_image = image.copy()
-            preview_image.thumbnail(PREVIEW_SIZE, Image.Resampling.LANCZOS)
-            photo_image = ImageTk.PhotoImage(preview_image)
-            self.image_refs.append(photo_image)
+            # Add loading indicator
+            loading_label = ttk.Label(frame, text="Loading...", font=ITALIC_FONT)
+            loading_label.pack()
+            self.loading_labels[idx] = loading_label
 
-            img_label = ttk.Label(frame, image=photo_image)
+            # Create empty image label
+            img_label = ttk.Label(frame)
             img_label.pack()
+            self.image_labels[idx] = img_label
 
-            def click_handler(e: tk.Event, idx: int = image_idx) -> None:
-                self.on_select(idx)
-                e.widget.winfo_toplevel().quit()
+            # Set up callback for when future completes
+            def make_callback(
+                index: int,
+            ) -> Callable[[concurrent.futures.Future[Optional[Image.Image]]], None]:
+                return lambda f: self._handle_loaded_image(f, index)
+
+            future.add_done_callback(make_callback(idx))
+
+            def click_handler(
+                e: tk.Event,
+                index: int = idx,
+                bound_future: concurrent.futures.Future[Optional[Image.Image]] = future,
+            ) -> None:
+                if bound_future.done():
+                    self.on_select(index, bound_future.result())
+                    e.widget.winfo_toplevel().quit()
 
             for widget in (frame, number_label, img_label):
                 widget.bind("<Button-1>", click_handler)
+
+    def _handle_loaded_image(
+        self, future: concurrent.futures.Future[Optional[Image.Image]], idx: int
+    ) -> None:
+        """Handle a completed image load."""
+        try:
+            if img := future.result():
+                # Remove loading indicator
+                if loading_label := self.loading_labels.get(idx):
+                    loading_label.destroy()
+
+                # Display image
+                preview_image = img.copy()
+                preview_image.thumbnail(PREVIEW_SIZE, Image.Resampling.LANCZOS)
+                photo_image = ImageTk.PhotoImage(preview_image)
+                self.image_refs.append(photo_image)
+
+                if img_label := self.image_labels.get(idx):
+                    img_label.configure(image=photo_image)
+            else:
+                # Show error state
+                if loading_label := self.loading_labels.get(idx):
+                    loading_label.configure(text="Failed to load")
+        except Exception as e:
+            logging.error(f"Error handling loaded image: {e}")
+            if loading_label := self.loading_labels.get(idx):
+                loading_label.configure(text="Error")
 
     def grid(self, **kwargs: Any) -> None:
         self.frame.grid(**kwargs)
@@ -204,28 +265,21 @@ class ImageSelectorGUI:
         on_skip: Callable[[], None],
         on_quit: Callable[[], None],
     ) -> None:
-        """Initialize the GUI with callbacks.
-
-        Args:
-            on_search: Callback when user requests a new search
-            on_select: Callback when user selects an image
-            on_skip: Callback when user skips (presses 'n')
-            on_quit: Callback when user quits (presses 'q')
-        """
+        """Initialize the GUI with callbacks."""
         self.on_search = on_search
         self.on_select = on_select
         self.on_skip = on_skip
         self.on_quit = on_quit
 
+        # Initialize state
+        self.term_data: Optional[Dict[str, Any]] = None
+        self.image_refs: List[ImageTk.PhotoImage] = []
+        self.image_grid: Optional[ImageGrid] = None
+
         # Create and configure the main window
         self.root = tk.Tk()
         self._setup_window()
         self._create_layout()
-
-        # Initialize state
-        self.term_data: Optional[Dict[str, Any]] = None
-        self.images: List[Image.Image] = []
-        self.image_refs: List[ImageTk.PhotoImage] = []
 
     def _setup_window(self) -> None:
         """Configure the main window properties."""
@@ -261,6 +315,10 @@ class ImageSelectorGUI:
         self.grid_frame = ttk.Frame(self.scroll_container.frame)
         self.grid_frame.grid(row=1, column=0, columnspan=GRID_COLUMNS)
 
+        # Create image grid
+        self.image_grid = ImageGrid(self.grid_frame, self.on_select)
+        self.image_grid.grid()
+
     def update_term(self, term_data: Dict[str, Any]) -> None:
         """Update the term information displayed."""
         self.term_data = term_data
@@ -273,25 +331,12 @@ class ImageSelectorGUI:
         self.term_info = TermInfoPanel(self.term_frame, term_data, self.on_search)
         self.term_info.grid(sticky="ew")
 
-    def update_images(self, new_images: List[Image.Image]) -> None:
-        """Update the displayed images."""
-        self.images = new_images
-        self.image_refs.clear()
-
-        # Clear existing grid
-        for widget in self.grid_frame.winfo_children():
-            widget.destroy()
-
-        # Create new image grid
-        self.image_grid = ImageGrid(self.grid_frame, self.on_select)
-        self.image_grid.grid()
-        self._display_images()
-
-    def _display_images(self) -> None:
-        """Display the current images in the grid."""
-        loaded_images = [(i, img) for i, img in enumerate(self.images)]
-        self.image_grid.display_images(loaded_images)
-        self.image_refs.extend(self.image_grid.image_refs)
+    def update_image_futures(
+        self, futures: List[concurrent.futures.Future[Optional[Image.Image]]]
+    ) -> None:
+        """Update the display with new image futures."""
+        if self.image_grid:
+            self.image_grid.display_futures(futures)
 
     def _focus_on_click(self, event: tk.Event) -> None:
         """Set focus to the root window when clicking outside of the input field."""
@@ -320,13 +365,18 @@ class ImageSelectorGUI:
             self.root.quit()
         elif key in "123456789":
             idx = int(key) - 1
-            if idx < len(self.images):
-                self.on_select(idx)
-                self.root.quit()
+            # Only allow selection if image is loaded
+            if self.image_grid and idx < len(self.image_grid.futures):
+                future = self.image_grid.futures[idx]
+                if future.done():
+                    self.on_select(idx, future.result())
+                    self.root.quit()
         elif key == "0":  # Handle 0 as the 10th image
-            if 9 < len(self.images):
-                self.on_select(9)
-                self.root.quit()
+            if self.image_grid and len(self.image_grid.futures) > 9:
+                future = self.image_grid.futures[9]
+                if future.done():
+                    self.on_select(9, future.result())
+                    self.root.quit()
 
     def _on_close(self) -> None:
         """Handle window close button."""

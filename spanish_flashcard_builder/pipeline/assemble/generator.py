@@ -51,7 +51,9 @@ class AnkiDeckGenerator:
         """Load term data from json."""
         try:
             term_path = term_dir / paths.flashcard_filename
-            return GeneratedTerm(**json.loads(term_path.read_text()))
+            if term_path.exists():
+                return GeneratedTerm(**json.loads(term_path.read_text()))
         except Exception as e:
-            logger.error(f"Failed to load {term_dir}: {e}")
-            return None
+            logger.error(f"Failed to load term data at {term_dir}: {e}")
+
+        return None

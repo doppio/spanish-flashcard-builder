@@ -9,7 +9,7 @@ class GeneratedTerm:
     term: str
     definitions: str
     frequency_rating: int
-    example_sentences: dict[str, str]
+    example_sentences: list[dict[str, str]]
     image_search_query: str
     part_of_speech: str
     gender: Optional[str] = None

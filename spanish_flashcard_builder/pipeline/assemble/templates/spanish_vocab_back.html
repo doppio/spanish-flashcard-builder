@@ -3,7 +3,7 @@
 <div class="term">{{ Term }} {{ Audio }}</div>
 
 <div class="part-of-speech">
-    {% if Gender %}{{ Gender }} {% endif %}{{ PartOfSpeech }}
+    {{#Gender}}{{Gender}} {{/Gender}}{{ PartOfSpeech }}
 </div>
 
 <div class="definition">{{ Definition }}</div>

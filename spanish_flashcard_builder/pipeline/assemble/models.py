@@ -38,12 +38,12 @@ class AnkiNote:
     part_of_speech: str
     gender: Optional[str]
     example_sentences: List[ExampleSentence]
-    image_path: Path
-    audio_path: Path
+    image_path: Optional[Path]
+    audio_path: Optional[Path]
     frequency_rating: int
     guid: str
 
-    def to_fields(self) -> List[str]:
+    def to_fields(self) -> List[Optional[str]]:
         """Convert to Anki fields."""
         return [
             self.term,
@@ -51,8 +51,8 @@ class AnkiNote:
             self.part_of_speech,
             self.definitions,
             self._format_sentences(),
-            f'<img src="{self.image_path.name}">',
-            f"[sound:{self.audio_path.name}]",
+            f'<img src="{self.image_path.name}">' if self.image_path else "",
+            f"[sound:{self.audio_path.name}]" if self.audio_path else "",
             str(self.frequency_rating),
             self.guid,
         ]
@@ -85,15 +85,16 @@ class SpanishVocabModel(genanki.Model):
             {"name": "GUID"},
         ]
 
+        template_dir = Path(__file__).parent / "templates"
         templates = [
             {
                 "name": "Spanish -> English",
-                "qfmt": env.get_template("spanish_vocab_front.html").render(),
-                "afmt": env.get_template("spanish_vocab_back.html").render(),
+                "qfmt": (template_dir / "spanish_vocab_front.html").read_text(),
+                "afmt": (template_dir / "spanish_vocab_back.html").read_text(),
             }
         ]
 
-        css = env.get_template("spanish_vocab.css").render()
+        css = (template_dir / "spanish_vocab.css").read_text()
 
         super().__init__(
             model_id=SPANISH_MODEL_ID,

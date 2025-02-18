@@ -1,7 +1,7 @@
 """Factory for creating Anki notes."""
 
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional
 
 import genanki
 
@@ -37,10 +37,16 @@ class AnkiNoteFactory:
         Raises:
             MediaProcessingError: If media files are missing or invalid
         """
-        image_path, audio_path = self._get_media_paths(term_dir)
+        image_path = self._get_image_path(term_dir)
+        audio_path = self._get_audio_path(term_dir)
+        if image_path is not None:
+            self.media_files.append(str(image_path))
+        if audio_path is not None:
+            self.media_files.append(str(audio_path))
 
-        # Convert dict to list of tuples for example sentences
-        example_sentences = [(es, en) for es, en in term.example_sentences.items()]
+        example_sentences = [
+            (example["es"], example["en"]) for example in term.example_sentences
+        ]
 
         note_data = AnkiNote(
             term=term.term,
@@ -48,8 +54,8 @@ class AnkiNoteFactory:
             part_of_speech=term.part_of_speech,
             gender=term.gender,
             example_sentences=example_sentences,
-            image_path=Path(image_path.name),
-            audio_path=Path(audio_path.name),
+            image_path=Path(image_path.name) if image_path else None,
+            audio_path=Path(audio_path.name) if audio_path else None,
             frequency_rating=term.frequency_rating,
             guid=term_dir.name,
         )
@@ -58,18 +64,24 @@ class AnkiNoteFactory:
             model=self.model,
             fields=note_data.to_fields(),
             guid=term_dir.name,
-            sort_field=f"{10000 - note_data.frequency_rating:05d}-{term.term.lower()}",
+            sort_field=f"""
+                {int(10000 - note_data.frequency_rating):05d}
+                -{term.term.lower()}
+            """,
         )
 
-    def _get_media_paths(self, term_dir: Path) -> Tuple[Path, Path]:
-        """Get and validate media paths."""
-        image_path = term_dir / "image.png"  # Using hardcoded paths for now
-        audio_path = term_dir / "audio.mp3"  # Using hardcoded paths for now
-
+    def _get_image_path(self, term_dir: Path) -> Optional[Path]:
+        """Get and validate image path."""
+        image_path = term_dir / (term_dir.name + ".png")
         if not image_path.exists():
-            raise MediaProcessingError(f"Missing image file: {image_path}")
-        if not audio_path.exists():
-            raise MediaProcessingError(f"Missing audio file: {audio_path}")
+            return None
 
-        self.media_files.extend([str(image_path), str(audio_path)])
-        return image_path, audio_path
+        return image_path
+
+    def _get_audio_path(self, term_dir: Path) -> Optional[Path]:
+        """Get and validate audio path."""
+        audio_path = term_dir / (term_dir.name + ".mp3")
+        if not audio_path.exists():
+            return None
+
+        return audio_path

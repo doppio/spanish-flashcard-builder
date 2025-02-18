@@ -30,7 +30,7 @@ def render_template(template_name: str, context: Dict[str, Any]) -> str:
 
 
 @dataclass(frozen=True)
-class AnkiNote:
+class NoteData:
     """A Spanish vocabulary note."""
 
     term: str
@@ -42,6 +42,7 @@ class AnkiNote:
     audio_path: Optional[Path]
     frequency_rating: int
     guid: str
+    sort_key: str
 
     def to_fields(self) -> List[Optional[str]]:
         """Convert to Anki fields."""
@@ -55,6 +56,7 @@ class AnkiNote:
             f"[sound:{self.audio_path.name}]" if self.audio_path else "",
             str(self.frequency_rating),
             self.guid,
+            self.sort_key,
         ]
 
     def _format_sentences(self) -> str:
@@ -83,6 +85,7 @@ class SpanishVocabModel(genanki.Model):
             {"name": "Audio"},
             {"name": "FrequencyRating"},
             {"name": "GUID"},
+            {"name": "SortKey"},
         ]
 
         template_dir = Path(__file__).parent / "templates"
@@ -100,6 +103,7 @@ class SpanishVocabModel(genanki.Model):
             model_id=SPANISH_MODEL_ID,
             name="Spanish Vocabulary",
             fields=fields,
+            sort_field_index=len(fields) - 1,
             templates=templates,
             css=css,
         )

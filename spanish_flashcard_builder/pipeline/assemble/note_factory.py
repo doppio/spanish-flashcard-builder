@@ -8,7 +8,7 @@ import genanki
 from spanish_flashcard_builder.exceptions import SpanishFlashcardError
 from spanish_flashcard_builder.pipeline.generate.models import GeneratedTerm
 
-from .models import AnkiNote, SpanishVocabModel
+from .models import NoteData, SpanishVocabModel
 
 
 class MediaProcessingError(SpanishFlashcardError):
@@ -48,7 +48,7 @@ class AnkiNoteFactory:
             (example["es"], example["en"]) for example in term.example_sentences
         ]
 
-        note_data = AnkiNote(
+        note_data = NoteData(
             term=term.term,
             definitions=term.definitions,
             part_of_speech=term.part_of_speech,
@@ -58,16 +58,13 @@ class AnkiNoteFactory:
             audio_path=Path(audio_path.name) if audio_path else None,
             frequency_rating=term.frequency_rating,
             guid=term_dir.name,
+            sort_key=f"{(10 - term.frequency_rating)}-{term_dir.name.lower()}",
         )
 
         return genanki.Note(
             model=self.model,
             fields=note_data.to_fields(),
             guid=term_dir.name,
-            sort_field=f"""
-                {int(10000 - note_data.frequency_rating):05d}
-                -{term.term.lower()}
-            """,
         )
 
     def _get_image_path(self, term_dir: Path) -> Optional[Path]:

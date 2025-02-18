@@ -1,5 +1,3 @@
-"""Generates Anki decks from processed vocabulary terms."""
-
 import json
 import logging
 from pathlib import Path
@@ -15,15 +13,15 @@ from .note_factory import AnkiNoteFactory
 logger = logging.getLogger(__name__)
 
 
-class AnkiDeckGenerator:
-    """Generates an Anki deck from vocabulary terms."""
+class AnkiDeckAssembler:
+    """Assembles an Anki deck from vocabulary terms."""
 
     def __init__(self, deck_name: str, deck_id: int):
         self.deck = genanki.Deck(deck_id, deck_name)
         self.note_factory = AnkiNoteFactory()
 
-    def generate(self) -> None:
-        """Generate the Anki deck package."""
+    def assemble(self) -> None:
+        """Assembles the Anki deck package."""
         terms_dir = Path(paths.terms_dir)
 
         for term_dir in terms_dir.iterdir():

@@ -92,9 +92,14 @@ class SpanishVocabModel(genanki.Model):
         templates = [
             {
                 "name": "Spanish -> English",
-                "qfmt": (template_dir / "spanish_vocab_front.html").read_text(),
-                "afmt": (template_dir / "spanish_vocab_back.html").read_text(),
-            }
+                "qfmt": (template_dir / "spanish_to_english_front.html").read_text(),
+                "afmt": (template_dir / "spanish_to_english_back.html").read_text(),
+            },
+            {
+                "name": "English -> Spanish",
+                "qfmt": (template_dir / "english_to_spanish_front.html").read_text(),
+                "afmt": (template_dir / "english_to_spanish_back.html").read_text(),
+            },
         ]
 
         css = (template_dir / "spanish_vocab.css").read_text()
